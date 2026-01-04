@@ -27,6 +27,7 @@
 #include <errno.h>                   // for errno
 #include <getopt.h>                  // for required_argument, no_argument
 #include <inttypes.h>                // for PRIu64
+#include <n3n/benchmark.h>           // for benchmark_run
 #include <n3n/conffile.h>            // for n3n_config_set_option
 #include <n3n/edge.h>                // for edge_init_conf_defaults
 #include <n3n/ethernet.h>            // for macaddr_str, macstr_t
@@ -349,6 +350,15 @@ static void cmd_test_hashing (int argc, char **argv, void *conf) {
     exit(errors);
 }
 
+static void cmd_test_benchmark (int argc, char **argv, void *conf) {
+    int seconds=1;
+    if(argv[1]) {
+        seconds = atoi(argv[1]);
+    }
+    benchmark_run(seconds);
+    exit(0);
+}
+
 static void cmd_tools_keygen (int argc, char **argv, void *conf) {
     if(argc == 1) {
         printf(
@@ -538,6 +548,12 @@ static struct n3n_subcmd_def cmd_tools[] = {
 };
 
 static struct n3n_subcmd_def cmd_test[] = {
+    {
+        .name = "benchmark",
+        .help = "run internal benchmarks",
+        .type = n3n_subcmd_type_fn,
+        .fn = &cmd_test_benchmark,
+    },
     {
         .name = "config",
         .type = n3n_subcmd_type_nest,

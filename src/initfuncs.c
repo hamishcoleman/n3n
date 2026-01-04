@@ -6,6 +6,7 @@
  */
 
 // prototype any internal (non-public) initfuncs (always sorted!)
+void n3n_initfuncs_benchmark ();
 void n3n_initfuncs_conffile_defs ();
 void n3n_initfuncs_mainloop ();
 void n3n_initfuncs_metrics ();
@@ -34,6 +35,7 @@ void n3n_initfuncs () {
 #endif
 
     // (sorted list)
+    n3n_initfuncs_benchmark();
     n3n_initfuncs_conffile_defs();
     n3n_initfuncs_mainloop();
     n3n_initfuncs_metrics();

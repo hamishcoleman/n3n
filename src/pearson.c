@@ -16,6 +16,7 @@
  *
  */
 
+#include <n3n/benchmark.h>
 
 // taken from https://github.com/Logan007/pearsonB
 // this is free and unencumbered software released into the public domain
@@ -219,7 +220,84 @@ uint16_t pearson_hash_16 (const uint8_t *in, size_t len) {
     return pearson_hash_64(in, len);
 }
 
+// TODO: this buffer is duplicated in test_hashing.c, refactor to avoid
+// repeating it
+//
+/* *INDENT-OFF* */
+static uint8_t test_data[]={
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+};
+/* *INDENT-ON* */
+
+static void *bench_pearson_setup (void) {
+    return NULL;
+}
+
+static void bench_pearson_teardown (void *data) {
+    return;
+}
+
+static uint64_t bench_64_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
+    uint64_t hash = pearson_hash_64(test_data, sizeof(test_data));
+    *bytes_in = sizeof(test_data);
+    *bytes_out = 8;
+    return hash;
+}
+
+static uint64_t bench_128_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
+    uint8_t hash[16];
+    pearson_hash_128(hash, test_data, sizeof(test_data));
+    *bytes_in = sizeof(test_data);
+    *bytes_out = 16;
+    return hash[0];
+}
+
+static uint64_t bench_256_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
+    uint8_t hash[32];
+    pearson_hash_256(hash, test_data, sizeof(test_data));
+    *bytes_in = sizeof(test_data);
+    *bytes_out = 32;
+    return hash[0];
+}
+
+static struct bench_item bench_64 = {
+    .name = "pearson_hash_64",
+    .setup = bench_pearson_setup,
+    .run = bench_64_run,
+    .teardown = bench_pearson_teardown,
+};
+
+static struct bench_item bench_128 = {
+    .name = "pearson_hash_128",
+    .setup = bench_pearson_setup,
+    .run = bench_128_run,
+    .teardown = bench_pearson_teardown,
+};
+
+static struct bench_item bench_256 = {
+    .name = "pearson_hash_256",
+    .setup = bench_pearson_setup,
+    .run = bench_256_run,
+    .teardown = bench_pearson_teardown,
+};
 
 void n3n_initfuncs_pearson (void) {
-
+    n3n_benchmark_register(&bench_64);
+    n3n_benchmark_register(&bench_128);
+    n3n_benchmark_register(&bench_256);
 }

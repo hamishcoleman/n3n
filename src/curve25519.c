@@ -16,6 +16,8 @@
  *
  */
 
+#include <n3n/benchmark.h>
+#include <stddef.h>
 
 /**
  * version 20081011
@@ -353,4 +355,41 @@ void curve25519 (unsigned char *q, const unsigned char *n, const unsigned char *
 
     for(i = 0; i < 32; ++i)
         q[i] = work[64 + i];
+}
+
+static const uint8_t test_data_b[] = {
+    0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
+    0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 9,
+};
+
+static const uint8_t test_data_k[] = {
+    55, 55, 55, 55,  55, 55, 55, 55,  55, 55, 55, 55,  55, 55, 55, 55,
+    55, 55, 55, 55,  55, 55, 55, 55,  55, 55, 55, 55,  55, 55, 55, 55,
+};
+
+static void *bench_curve25519_setup (void) {
+    return NULL;
+}
+
+static void bench_curve25519_teardown (void *data) {
+    return;
+}
+
+static uint64_t bench_curve25519_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
+    uint8_t q[32];
+    curve25519(q, test_data_k, test_data_b);
+    *bytes_in = 32;
+    *bytes_out = 32;
+    return q[0];
+}
+
+static struct bench_item bench_curve25519 = {
+    .name = "curve25519",
+    .setup = bench_curve25519_setup,
+    .run = bench_curve25519_run,
+    .teardown = bench_curve25519_teardown,
+};
+
+void n3n_initfuncs_curve25519 (void) {
+    n3n_benchmark_register(&bench_curve25519);
 }

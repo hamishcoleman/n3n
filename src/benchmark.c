@@ -4,18 +4,19 @@
  *
  */
 
+#include <inttypes.h>
 #include <n3n/benchmark.h>
 #include <signal.h>
 #include <stdbool.h>            // for true, false
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
 #include <sys/time.h>
 #include <unistd.h>
 
 #ifdef __linux__
 #include <linux/perf_event.h>
+#include <sys/ioctl.h>
 #include <sys/syscall.h>
 
 static long
@@ -65,14 +66,13 @@ static struct bench_item bench_nop = {
 
 static bool alarm_fired;
 
+#ifndef _WIN32
 static void handler (int nr) {
     alarm_fired = true;
 }
+#endif
 
 static void run_one_item (const int seconds, struct bench_item *item) {
-    struct sigaction sa = {
-        .sa_handler = &handler,
-    };
     struct timeval tv1;
     struct timeval tv2;
 
@@ -94,8 +94,14 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 
     int loops = 0;
     alarm_fired = false;
+
+#ifndef _WIN32
+    struct sigaction sa = {
+        .sa_handler = &handler,
+    };
     sigaction(SIGALRM, &sa, NULL);
     alarm(seconds);
+#endif
 
     gettimeofday(&tv1, NULL);
 #ifdef PERF
@@ -113,6 +119,13 @@ static void run_one_item (const int seconds, struct bench_item *item) {
         loops++;
         item->bytes_in += in;
         item->bytes_out += out;
+
+#ifdef _WIN32
+        gettimeofday(&tv2, NULL);
+        if((tv2.tv_sec - tv1.tv_sec) >= seconds) {
+            alarm_fired = true;
+        }
+#endif
     }
 
 #ifdef PERF
@@ -131,7 +144,14 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 
     item->teardown(data);
 
+#ifdef _WIN32
+    // Just do a half-arsed job on windows, which matches their ability to
+    // support POSIX
+    tv1.tv_sec = tv2.tv_sec - tv1.tv_sec;
+    tv1.tv_usec = tv2.tv_usec - tv1.tv_usec;
+#else
     timersub(&tv2, &tv1, &tv1);
+#endif
 
     item->loops = loops;
     item->sec = tv1.tv_sec;
@@ -152,8 +172,8 @@ void benchmark_run (const int seconds) {
         run_one_item(seconds, p);
 
         printf("%i.%06i,", p->sec, p->usec);
-        printf("%lu,%lu,", p->bytes_in, p->bytes_out);
-        printf("%lu,%lu\n", p->loops, p->instr);
+        printf("%" PRIu64 ",%" PRIu64 ",", p->bytes_in, p->bytes_out);
+        printf("%" PRIu64 ",%" PRIu64 "\n", p->loops, p->instr);
 
         p = p->next;
     }

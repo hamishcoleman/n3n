@@ -19,6 +19,7 @@
  */
 
 
+#include <n3n/benchmark.h>
 #include <n3n/logging.h> // for traceEvent
 #include <n3n/transform.h>   // for n3n_transform_register
 #include <stdint.h>     // for uint8_t
@@ -137,12 +138,76 @@ int n2n_transop_lzo_init (const n2n_edge_conf_t *conf, n2n_trans_op_t *ttt) {
     return 0;
 }
 
+// TODO: this buffer is duplicated in multiple places, refactor to avoid
+// repeating it
+//
+/* *INDENT-OFF* */
+static uint8_t test_data[]={
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+};
+/* *INDENT-ON* */
+
+static void *bench_lzo_setup (void) {
+    return calloc(1, sizeof(transop_lzo_t));
+}
+
+static void bench_lzo_teardown (void *data) {
+    free(data);
+}
+
+static uint64_t bench_lzo_comp_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
+    uint8_t outbuf[sizeof(test_data) + sizeof(test_data) / 16 + 64 + 3];
+    lzo_uint compression_len = 0;
+
+    transop_lzo_t *priv = (transop_lzo_t *)data;
+
+    int result = lzo1x_1_compress(
+        test_data,
+        sizeof(test_data),
+        outbuf,
+        &compression_len,
+        priv->wrkmem
+    );
+
+    if(result != LZO_E_OK) {
+        traceEvent(TRACE_ERROR, "encode_lzo compression error");
+        compression_len = 0;
+    }
+
+    *bytes_in = sizeof(test_data);
+    *bytes_out = compression_len;
+    return outbuf[0];
+}
+
 static struct n3n_transform transform = {
     .name = "lzo",
     .id = N2N_COMPRESSION_ID_LZO,
     .is_compress = true,
 };
 
+static struct bench_item bench_lzo_comp = {
+    .name = "lzo_comp",
+    .setup = bench_lzo_setup,
+    .run = bench_lzo_comp_run,
+    .teardown = bench_lzo_teardown,
+};
+
 void n3n_initfuncs_transform_lzo () {
     n3n_transform_register(&transform);
+    n3n_benchmark_register(&bench_lzo_comp);
 }

@@ -124,7 +124,9 @@ static struct n3n_conf_option section_connection[] = {
                 "router's port forwarding to point to a known port, or when "
                 "coupled with a local ip address can help with restriction to "
                 "a certain LAN or WiFi interface.  By default, the daemon "
-                "binds to any interface. (both edge and supernode)",
+                "binds to any interface. (both edge and supernode). "
+                "This is unreliable and usually ignored when using TCP "
+                "outbound edge connections",
     },
     {
         .name = "connect_tcp",

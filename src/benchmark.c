@@ -35,40 +35,85 @@ static long perf_event_open (
     return ret;
 }
 
-static int perf_setup() {
+static int _perf_setup1(struct bench_item *item, int id,uint64_t config) {
     struct perf_event_attr pe;
 
     memset(&pe, 0, sizeof(pe));
     pe.type = PERF_TYPE_HARDWARE;
     pe.size = sizeof(pe);
-    pe.config = PERF_COUNT_HW_INSTRUCTIONS;
+    pe.config = config;
     pe.disabled = 1;
     pe.exclude_kernel = 1;
     pe.exclude_hv = 1;
 
-    return perf_event_open(&pe, 0, -1, -1, 0);
-}
+    pe.sample_period = 0;
+    pe.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
 
-static void perf_measure_start(int fd) {
+    int fd = perf_event_open(&pe, 0, -1, item->fd[0], 0);
     if(fd == -1) {
-        return;
-    }
-    ioctl(fd, PERF_EVENT_IOC_RESET, 0);
-    ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
-}
-
-static void perf_measure_collect(int fd, struct bench_item *item) {
-    if(fd == -1) {
-        return;
+        return -1;
     }
 
-    ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+    ioctl(fd, PERF_EVENT_IOC_ID, &item->id[id]);
+    return fd;
+}
 
-    uint64_t instr;
-    read(fd, &instr, sizeof(instr));
-    close(fd);
+static void perf_setup(struct bench_item *item) {
+    item->fd[0] = -1;  // make the kernel see the first setup as leader
+    item->fd[0] = _perf_setup1(item, 0,  PERF_COUNT_HW_INSTRUCTIONS);
+    if(item->fd[0] == -1) {
+        return;
+    }
 
-    item->instr = instr;
+    item->fd[1] = _perf_setup1(item, 1, PERF_COUNT_HW_CPU_CYCLES);
+    if(item->fd[1] == -1) {
+        close(item->fd[0]);
+        item->fd[0] = -1;
+        return;
+    }
+}
+
+static void perf_measure_start(struct bench_item *item) {
+    if(item->fd[0] == -1) {
+        return;
+    }
+    ioctl(item->fd[0], PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+    ioctl(item->fd[0], PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
+}
+
+struct read_format {
+    uint64_t nr;
+    struct {
+        uint64_t value;
+        uint64_t id;
+    } values[2];
+};
+
+static void perf_measure_collect(struct bench_item *item) {
+    if(item->fd[0] == -1) {
+        return;
+    }
+
+    ioctl(item->fd[0], PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
+
+    struct read_format data;
+    read(item->fd[0], &data, sizeof(data));
+
+    for(int i = 0; i < data.nr; i++) {
+        if(data.values[i].id == item->id[0]) {
+            item->instr = data.values[i].value;
+        } else if(data.values[i].id == item->id[1]) {
+            item->cycles = data.values[i].value;
+        } else {
+            printf("Unexpected perf id\n");
+            exit(1);
+        }
+    }
+
+    close(item->fd[0]);
+    close(item->fd[1]);
+    item->fd[0] = -1;
+    item->fd[1] = -1;
 }
 #endif
 
@@ -114,7 +159,7 @@ static void run_one_item (const int seconds, struct bench_item *item) {
     struct timeval tv2;
 
 #ifdef LINUX_PERF
-    int fd = perf_setup();
+    perf_setup(item);
 #endif
 
     void *data = item->setup();
@@ -132,7 +177,7 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 
     gettimeofday(&tv1, NULL);
 #ifdef LINUX_PERF
-    perf_measure_start(fd);
+    perf_measure_start(item);
 #endif
 
     while(!alarm_fired) {
@@ -155,7 +200,7 @@ static void run_one_item (const int seconds, struct bench_item *item) {
     // TODO: per loop min/max/sumofsquares?
 
 #ifdef LINUX_PERF
-    perf_measure_collect(fd, item);
+    perf_measure_collect(item);
 #endif
     gettimeofday(&tv2, NULL);
 
@@ -178,7 +223,7 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 void benchmark_run (const int seconds) {
     struct bench_item *p = registered_items;
 
-    printf("name,variant,seconds,bytes_in,bytes_out,loops,instr\n");
+    printf("name,variant,seconds,bytes_in,bytes_out,loops,cycles,instr\n");
     while(p) {
         printf("%s,", p->name);
         if(p->variant) {
@@ -190,7 +235,12 @@ void benchmark_run (const int seconds) {
 
         printf("%i.%06i,", p->sec, p->usec);
         printf("%" PRIu64 ",%" PRIu64 ",", p->bytes_in, p->bytes_out);
-        printf("%" PRIu64 ",%" PRIu64 "\n", p->loops, p->instr);
+        printf(
+            "%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n",
+            p->loops,
+            p->cycles,
+            p->instr
+        );
 
         p = p->next;
     }

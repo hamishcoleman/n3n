@@ -115,7 +115,18 @@ static void perf_measure_collect(struct bench_item *item) {
     item->fd[0] = -1;
     item->fd[1] = -1;
 }
+#else
+static void perf_setup(struct bench_item *item) {
+    return;
+}
+static void perf_measure_start(struct bench_item *item) {
+    return;
+}
+static void perf_measure_collect(struct bench_item *item) {
+    return;
+}
 #endif
+
 
 static struct bench_item *registered_items = NULL;
 
@@ -158,9 +169,7 @@ static void run_one_item (const int seconds, struct bench_item *item) {
     struct timeval tv1;
     struct timeval tv2;
 
-#ifdef LINUX_PERF
     perf_setup(item);
-#endif
 
     void *data = item->setup();
 
@@ -176,9 +185,7 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 #endif
 
     gettimeofday(&tv1, NULL);
-#ifdef LINUX_PERF
     perf_measure_start(item);
-#endif
 
     while(!alarm_fired) {
         uint64_t in;
@@ -199,9 +206,7 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 
     // TODO: per loop min/max/sumofsquares?
 
-#ifdef LINUX_PERF
     perf_measure_collect(item);
-#endif
     gettimeofday(&tv2, NULL);
 
     item->teardown(data);

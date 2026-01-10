@@ -19,8 +19,11 @@
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 
-static long
-perf_event_open (
+#define LINUX_PERF  1
+#endif
+
+#if LINUX_PERF
+static long perf_event_open (
     struct perf_event_attr *hw_event,
     pid_t pid,
     int cpu,
@@ -32,7 +35,41 @@ perf_event_open (
     return ret;
 }
 
-#define PERF
+static int perf_setup() {
+    struct perf_event_attr pe;
+
+    memset(&pe, 0, sizeof(pe));
+    pe.type = PERF_TYPE_HARDWARE;
+    pe.size = sizeof(pe);
+    pe.config = PERF_COUNT_HW_INSTRUCTIONS;
+    pe.disabled = 1;
+    pe.exclude_kernel = 1;
+    pe.exclude_hv = 1;
+
+    return perf_event_open(&pe, 0, -1, -1, 0);
+}
+
+static void perf_measure_start(int fd) {
+    if(fd == -1) {
+        return;
+    }
+    ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+    ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+}
+
+static void perf_measure_collect(int fd, struct bench_item *item) {
+    if(fd == -1) {
+        return;
+    }
+
+    ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+
+    uint64_t instr;
+    read(fd, &instr, sizeof(instr));
+    close(fd);
+
+    item->instr = instr;
+}
 #endif
 
 static struct bench_item *registered_items = NULL;
@@ -76,18 +113,8 @@ static void run_one_item (const int seconds, struct bench_item *item) {
     struct timeval tv1;
     struct timeval tv2;
 
-#ifdef PERF
-    struct perf_event_attr pe;
-
-    memset(&pe, 0, sizeof(pe));
-    pe.type = PERF_TYPE_HARDWARE;
-    pe.size = sizeof(pe);
-    pe.config = PERF_COUNT_HW_INSTRUCTIONS;
-    pe.disabled = 1;
-    pe.exclude_kernel = 1;
-    pe.exclude_hv = 1;
-
-    int fd = perf_event_open(&pe, 0, -1, -1, 0);
+#ifdef LINUX_PERF
+    int fd = perf_setup();
 #endif
 
     void *data = item->setup();
@@ -104,11 +131,8 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 #endif
 
     gettimeofday(&tv1, NULL);
-#ifdef PERF
-    if(fd != -1) {
-        ioctl(fd, PERF_EVENT_IOC_RESET, 0);
-        ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
-    }
+#ifdef LINUX_PERF
+    perf_measure_start(fd);
 #endif
 
     while(!alarm_fired) {
@@ -128,17 +152,10 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 #endif
     }
 
-#ifdef PERF
-    if(fd != -1) {
-        ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+    // TODO: per loop min/max/sumofsquares?
 
-        uint64_t instr;
-        read(fd, &instr, sizeof(instr));
-
-        // TODO: per loop min/max/sumofsquares?
-
-        item->instr = instr;
-    }
+#ifdef LINUX_PERF
+    perf_measure_collect(fd, item);
 #endif
     gettimeofday(&tv2, NULL);
 

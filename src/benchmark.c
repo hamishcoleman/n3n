@@ -35,7 +35,7 @@ static long perf_event_open (
     return ret;
 }
 
-static int _perf_setup1(struct bench_item *item, int id,uint64_t config) {
+static int _perf_setup1 (struct bench_item *item, int id,uint64_t config) {
     struct perf_event_attr pe;
 
     memset(&pe, 0, sizeof(pe));
@@ -58,7 +58,7 @@ static int _perf_setup1(struct bench_item *item, int id,uint64_t config) {
     return fd;
 }
 
-static void perf_setup(struct bench_item *item) {
+static void perf_setup (struct bench_item *item) {
     item->fd[0] = -1;  // make the kernel see the first setup as leader
     item->fd[0] = _perf_setup1(item, 0,  PERF_COUNT_HW_INSTRUCTIONS);
     if(item->fd[0] == -1) {
@@ -73,7 +73,7 @@ static void perf_setup(struct bench_item *item) {
     }
 }
 
-static void perf_measure_start(struct bench_item *item) {
+static void perf_measure_start (struct bench_item *item) {
     if(item->fd[0] == -1) {
         return;
     }
@@ -89,7 +89,7 @@ struct read_format {
     } values[2];
 };
 
-static void perf_measure_collect(struct bench_item *item) {
+static void perf_measure_collect (struct bench_item *item) {
     if(item->fd[0] == -1) {
         return;
     }
@@ -116,13 +116,13 @@ static void perf_measure_collect(struct bench_item *item) {
     item->fd[1] = -1;
 }
 #else
-static void perf_setup(struct bench_item *item) {
+static void perf_setup (struct bench_item *item) {
     return;
 }
-static void perf_measure_start(struct bench_item *item) {
+static void perf_measure_start (struct bench_item *item) {
     return;
 }
-static void perf_measure_collect(struct bench_item *item) {
+static void perf_measure_collect (struct bench_item *item) {
     return;
 }
 #endif

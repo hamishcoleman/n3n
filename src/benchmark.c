@@ -225,7 +225,7 @@ static void run_one_item (const int seconds, struct bench_item *item) {
     item->usec = tv1.tv_usec;
 }
 
-void benchmark_run (const int seconds) {
+void benchmark_run_all (const int seconds) {
     struct bench_item *p = registered_items;
 
     printf("name,variant,seconds,bytes_in,bytes_out,loops,cycles,instr\n");

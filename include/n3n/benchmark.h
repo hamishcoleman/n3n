@@ -35,6 +35,6 @@ struct bench_item {
 
 void n3n_benchmark_register (struct bench_item *);
 
-void benchmark_run (int);
+void benchmark_run_all (int seconds);
 
 #endif

@@ -357,7 +357,7 @@ static void cmd_test_benchmark (int argc, char **argv, void *_conf) {
     // - provide a way to run a partial set of benchmarks
     // - provide a way to output in normalised or raw numbers
 
-    benchmark_run(conf->benchmark_seconds);
+    benchmark_run_all(conf->benchmark_seconds);
     exit(0);
 }
 

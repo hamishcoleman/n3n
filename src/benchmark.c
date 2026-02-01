@@ -226,10 +226,13 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 }
 
 void benchmark_run_all (const int seconds) {
-    struct bench_item *p = registered_items;
+    struct bench_item *p;
 
     printf("name,variant,seconds,bytes_in,bytes_out,loops,cycles,instr\n");
-    while(p) {
+    for(p = registered_items; p; p = p->next) {
+        if(p->flags && BENCH_ITEM_CHECKONLY) {
+            continue;
+        }
         printf("%s,", p->name);
         if(p->variant) {
             printf("%s", p->variant);
@@ -246,9 +249,38 @@ void benchmark_run_all (const int seconds) {
             p->cycles,
             p->instr
         );
-
-        p = p->next;
     }
+}
+
+int benchmark_check_all (int level) {
+    int result = 0;
+
+    for(struct bench_item *p = registered_items; p; p = p->next) {
+        if(!p->check) {
+            continue;
+        }
+
+        fprintf(stderr, "%s", p->name);
+        if(p->variant) {
+            fprintf(stderr, ",%s", p->variant);
+        }
+        fprintf(stderr, ": ");
+
+        void *data = p->setup();
+
+        uint64_t in;
+        uint64_t out;
+
+        p->run(data, &in, &out);
+
+        fprintf(stderr, "tested\n");
+
+        result += p->check(data, level);
+
+        p->teardown(data);
+    }
+
+    return result;
 }
 
 /* *INDENT-OFF* */

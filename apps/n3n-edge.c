@@ -338,18 +338,6 @@ static void cmd_test_config_roundtrip (int argc, char **argv, void *_conf) {
     exit(0);
 }
 
-static void cmd_test_hashing (int argc, char **argv, void *conf) {
-    int level=0;
-    if(argv[1]) {
-        level = atoi(argv[1]);
-    }
-    int errors = test_hashing(level);
-    if(!errors) {
-        printf("OK\n");
-    }
-    exit(errors);
-}
-
 static void cmd_test_benchmark (int argc, char **argv, void *_conf) {
     n2n_edge_conf_t *conf = (n2n_edge_conf_t *)_conf;
 
@@ -359,6 +347,23 @@ static void cmd_test_benchmark (int argc, char **argv, void *_conf) {
 
     benchmark_run_all(conf->benchmark_seconds);
     exit(0);
+}
+
+static void cmd_test_builtin (int argc, char **argv, void *conf) {
+    int level=0;
+    if(argv[1]) {
+        level = atoi(argv[1]);
+    }
+    int errors = benchmark_check_all(level);
+    if(!errors) {
+        printf("OK\n");
+    }
+    exit(errors);
+}
+
+static void cmd_test_hashing (int argc, char **argv, void *conf) {
+    fprintf(stderr, "Deprecated: use `n3n-edge test builtin` instead\n");
+    cmd_test_builtin(argc, argv, conf);
 }
 
 static void cmd_tools_keygen (int argc, char **argv, void *conf) {
@@ -557,13 +562,19 @@ static struct n3n_subcmd_def cmd_test[] = {
         .fn = &cmd_test_benchmark,
     },
     {
+        .name = "builtin",
+        .help = "run built-in tests",
+        .type = n3n_subcmd_type_fn,
+        .fn = &cmd_test_builtin,
+    },
+    {
         .name = "config",
         .type = n3n_subcmd_type_nest,
         .nest = cmd_test_config,
     },
     {
         .name = "hashing",
-        .help = "test hashing functions",
+        .help = "Deprecated",
         .type = n3n_subcmd_type_fn,
         .fn = &cmd_test_hashing,
     },

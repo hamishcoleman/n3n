@@ -127,7 +127,6 @@ OBJS=\
 	src/sn_selection.o \
 	src/sn_utils.o \
 	src/speck.o \
-	src/test_hashing.o \
 	src/tf.o \
 	src/transform.o \
 	src/transform_aes.o \

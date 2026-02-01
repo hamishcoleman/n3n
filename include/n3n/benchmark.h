@@ -14,9 +14,10 @@ struct bench_item {
 
     const char *name;                     // What is this testing
     const char *variant;                  // variant, eg name of optimisation
+    int flags;
     void *(*setup)(void);           // Any pre-run setup
     uint64_t (*run)(void *data, uint64_t *bytes_in, uint64_t *bytes_out);
-    // void *(*check)(...           // TODO: add a way to check result
+    int (*check)(void *data, int level);   // Check result against expected
     void (*teardown)(void *data);   // destroy any setup done
 
     // Perf processing tmp storage
@@ -33,6 +34,8 @@ struct bench_item {
     uint64_t instr;     // how many CPU instructions retired
 };
 
+#define BENCH_ITEM_CHECKONLY   0x1  // benchmark should be skipped
+
 struct test_data {
     const int size;
     const void *data;
@@ -46,5 +49,6 @@ extern const struct test_data benchmark_test_data[TEST_DATA_COUNT];
 void n3n_benchmark_register (struct bench_item *);
 
 void benchmark_run_all (int seconds);
+int benchmark_check_all (int level);
 
 #endif

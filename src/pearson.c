@@ -16,7 +16,13 @@
  *
  */
 
+#include <inttypes.h>  // for PRIx64, PRIx16, PRIx32
 #include <n3n/benchmark.h>
+#include <n3n/hexdump.h>  // for fhexdump
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>    // for memcmp
+
 
 // taken from https://github.com/Logan007/pearsonB
 // this is free and unencumbered software released into the public domain
@@ -220,15 +226,93 @@ uint16_t pearson_hash_16 (const uint8_t *in, size_t len) {
     return pearson_hash_64(in, len);
 }
 
+static const uint16_t expected_pearson_hash_16 = 0x8be;
+static const uint32_t expected_pearson_hash_32 = 0x2ea108be;
+static const uint64_t expected_pearson_hash_64 = 0xb2d98fa82ea108be;
+static const uint8_t expected_pearson_hash_256[] = {
+    0x40,0x09,0x5c,0xca,0x28,0x6b,0xfb,0x93,
+    0x4c,0x4a,0xf7,0xc0,0x79,0xa8,0x04,0x5a,
+    0xb5,0x3d,0xcf,0xb3,0xa7,0xed,0x18,0x56,
+    0xb2,0xd9,0x8f,0xa8,0x2e,0xa1,0x08,0xbe,
 };
 
 static void *bench_pearson_setup (void) {
     // largest result size plus one for the length
-    return malloc(32 + 1);
+    return malloc(sizeof(expected_pearson_hash_256) + 1);
 }
 
 static void bench_pearson_teardown (void *data) {
     return free(data);
+}
+
+static uint64_t bench_16_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
+    uint16_t *result = (uint16_t *)data;
+    uint8_t *bytes = (uint8_t *)data;
+
+    const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
+    const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
+
+    *result = pearson_hash_16(test_data, input_size);
+    *bytes_in = input_size;
+    *bytes_out = 2;
+    bytes[32] = *bytes_out;
+    return 0;
+}
+
+static int bench_16_check (void *data, int level) {
+    uint16_t *result = (uint16_t *)data;
+    if(level) {
+        printf("%s: output = 0x%" PRIx16 "\n", "pearson_hash_16", *result);
+        printf("\n");
+    }
+
+    uint8_t *bytes = (uint8_t *)data;
+    if(bytes[32] != 2) {
+        // wrong size is an error
+        return 1;
+    }
+
+    if(*result != expected_pearson_hash_16) {
+        // not matching expected result is an error
+        return 1;
+    }
+
+    return 0;
+}
+
+static uint64_t bench_32_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
+    uint32_t *result = (uint32_t *)data;
+    uint8_t *bytes = (uint8_t *)data;
+
+    const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
+    const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
+
+    *result = pearson_hash_32(test_data, input_size);
+    *bytes_in = input_size;
+    *bytes_out = 4;
+    bytes[32] = *bytes_out;
+    return 0;
+}
+
+static int bench_32_check (void *data, int level) {
+    uint32_t *result = (uint32_t *)data;
+    if(level) {
+        printf("%s: output = 0x%" PRIx32 "\n", "pearson_hash_32", *result);
+        printf("\n");
+    }
+
+    uint8_t *bytes = (uint8_t *)data;
+    if(bytes[32] != 4) {
+        // wrong size is an error
+        return 1;
+    }
+
+    if(*result != expected_pearson_hash_32) {
+        // not matching expected result is an error
+        return 1;
+    }
+
+    return 0;
 }
 
 static uint64_t bench_64_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
@@ -242,6 +326,27 @@ static uint64_t bench_64_run (void *data, uint64_t *bytes_in, uint64_t *bytes_ou
     *bytes_in = input_size;
     *bytes_out = 8;
     bytes[32] = *bytes_out;
+    return 0;
+}
+
+static int bench_64_check (void *data, int level) {
+    uint64_t *result = (uint64_t *)data;
+    if(level) {
+        printf("%s: output = 0x%" PRIx64 "\n", "pearson_hash_64", *result);
+        printf("\n");
+    }
+
+    uint8_t *bytes = (uint8_t *)data;
+    if(bytes[32] != 8) {
+        // wrong size is an error
+        return 1;
+    }
+
+    if(*result != expected_pearson_hash_64) {
+        // not matching expected result is an error
+        return 1;
+    }
+
     return 0;
 }
 
@@ -271,28 +376,76 @@ static uint64_t bench_256_run (void *data, uint64_t *bytes_in, uint64_t *bytes_o
     return 0;
 }
 
+static int bench_buf_check (void *data, int level) {
+    uint8_t *bytes = (uint8_t *)data;
+    int data_size = bytes[32];
+
+    if(level) {
+        printf("%s: output:\n", "pearson_hash");
+        fhexdump(0, data, data_size, stdout);
+        printf("\n");
+    }
+
+    if(data_size != 16 && data_size != 32) {
+        // wrong size is an error
+        return 1;
+    }
+
+    if(memcmp(data, &expected_pearson_hash_256[32-data_size], data_size) != 0) {
+        // not matching expected result is an error
+        return 1;
+    }
+
+    return 0;
+}
+
+static struct bench_item bench_16 = {
+    .name = "pearson_hash_16",
+    .flags = BENCH_ITEM_CHECKONLY,
+    .setup = bench_pearson_setup,
+    .run = bench_16_run,
+    .check = bench_16_check,
+    .teardown = bench_pearson_teardown,
+};
+
+static struct bench_item bench_32 = {
+    .name = "pearson_hash_32",
+    .flags = BENCH_ITEM_CHECKONLY,
+    .setup = bench_pearson_setup,
+    .run = bench_32_run,
+    .check = bench_32_check,
+    .teardown = bench_pearson_teardown,
+};
+
 static struct bench_item bench_64 = {
     .name = "pearson_hash_64",
     .setup = bench_pearson_setup,
     .run = bench_64_run,
+    .check = bench_64_check,
     .teardown = bench_pearson_teardown,
 };
 
 static struct bench_item bench_128 = {
     .name = "pearson_hash_128",
+    .flags = BENCH_ITEM_CHECKONLY,
     .setup = bench_pearson_setup,
     .run = bench_128_run,
+    .check = bench_buf_check,
     .teardown = bench_pearson_teardown,
 };
 
 static struct bench_item bench_256 = {
     .name = "pearson_hash_256",
+    .flags = BENCH_ITEM_CHECKONLY,
     .setup = bench_pearson_setup,
     .run = bench_256_run,
+    .check = bench_buf_check,
     .teardown = bench_pearson_teardown,
 };
 
 void n3n_initfuncs_pearson (void) {
+    n3n_benchmark_register(&bench_16);
+    n3n_benchmark_register(&bench_32);
     n3n_benchmark_register(&bench_64);
     n3n_benchmark_register(&bench_128);
     n3n_benchmark_register(&bench_256);

@@ -1,4 +1,4 @@
-### test: ./apps/n3n-edge test hashing
+### test: ./apps/n3n-edge test builtin
 OK
 
 ### test: ./apps/n3n-edge test config roundtrip

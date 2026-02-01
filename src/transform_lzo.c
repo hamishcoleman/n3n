@@ -20,6 +20,7 @@
 
 
 #include <n3n/benchmark.h>
+#include <n3n/hexdump.h>   // for fhexdump
 #include <n3n/logging.h> // for traceEvent
 #include <n3n/transform.h>   // for n3n_transform_register
 #include <stdint.h>     // for uint8_t
@@ -138,39 +139,75 @@ int n2n_transop_lzo_init (const n2n_edge_conf_t *conf, n2n_trans_op_t *ttt) {
     return 0;
 }
 
+static const uint8_t expected_lzo_data[] = {
+    0x0d,0x00,0x01,0x02,0x03,0x04,0x05,0x06,
+    0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,
+    0x0f,0x20,0x00,0xbc,0x3c,0x00,0x00,0x02,
+    0x0c,0x0d,0x0e,0x0f,0x00,0x01,0x02,0x03,
+    0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,
+    0x0c,0x0d,0x0e,0x0f,0x11,0x00,0x00,
+};
+static const int expected_lzo_size = 0x2f;
+
+struct bench_data {
+    transop_lzo_t priv;
+    uint8_t outbuf[(0x200 * 2) / 16 + 64 + 3];
+    lzo_uint outbuf_size;
+};
+
 static void *bench_lzo_setup (void) {
-    return calloc(1, sizeof(transop_lzo_t));
+    return calloc(1, sizeof(struct bench_data));
 }
 
 static void bench_lzo_teardown (void *data) {
     free(data);
 }
 
-static uint64_t bench_lzo_comp_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
+static uint64_t bench_lzo_comp_run (void *_data, uint64_t *bytes_in, uint64_t *bytes_out) {
+    struct bench_data *data = (struct bench_data *)_data;
     const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
     const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
 
-    uint8_t outbuf[(input_size * 2) / 16 + 64 + 3];
-    lzo_uint compression_len = 0;
-
-    transop_lzo_t *priv = (transop_lzo_t *)data;
+    data->outbuf_size = 0;
 
     int result = lzo1x_1_compress(
         test_data,
         input_size,
-        outbuf,
-        &compression_len,
-        priv->wrkmem
+        data->outbuf,
+        &data->outbuf_size,
+        data->priv.wrkmem
     );
 
     if(result != LZO_E_OK) {
         traceEvent(TRACE_ERROR, "encode_lzo compression error");
-        compression_len = 0;
+        data->outbuf_size = 0;
     }
 
     *bytes_in = input_size;
-    *bytes_out = compression_len;
-    return outbuf[0];
+    *bytes_out = data->outbuf_size;
+    return 0;
+}
+
+static int bench_lzo_comp_check (void *_data, int level) {
+    struct bench_data *data = (struct bench_data *)_data;
+
+    if(level) {
+        printf("%s: output:\n", "lzo_comp");
+        fhexdump(0, data->outbuf, data->outbuf_size, stdout);
+        printf("\n");
+    }
+
+    if(data->outbuf_size != expected_lzo_size) {
+        // wrong size is an error
+        return 1;
+    }
+
+    if(memcmp(data->outbuf, &expected_lzo_data, expected_lzo_size) != 0) {
+        // not matching expected result is an error
+        return 1;
+    }
+
+    return 0;
 }
 
 static struct n3n_transform transform = {
@@ -183,6 +220,7 @@ static struct bench_item bench_lzo_comp = {
     .name = "lzo_comp",
     .setup = bench_lzo_setup,
     .run = bench_lzo_comp_run,
+    .check = bench_lzo_comp_check,
     .teardown = bench_lzo_teardown,
 };
 

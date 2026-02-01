@@ -272,18 +272,12 @@ static uint8_t test_data[]={
 };
 /* *INDENT-ON* */
 
-void *benchmark_get_test_data (int data_nr, int data_size) {
-    switch(data_nr) {
-        case TEST_DATA_32x16:
-            if(data_size != sizeof(test_data)) {
-                return NULL;
-            }
-            return &test_data;
-    }
-
-    // Error
-    return NULL;
-}
+struct test_data benchmark_test_data[TEST_DATA_COUNT] = {
+    [TEST_DATA_32x16] = {
+        .size = sizeof(test_data),
+        .data = &test_data,
+    },
+};
 
 void n3n_initfuncs_benchmark () {
     n3n_benchmark_register(&bench_nop);

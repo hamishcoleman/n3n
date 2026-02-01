@@ -3615,6 +3615,8 @@ void edge_init_conf_defaults (n2n_edge_conf_t *conf, char *sessionname) {
     conf->metric = 0;
     conf->mtu = DEFAULT_MTU;
 
+    conf->benchmark_seconds = 1;
+
 #ifndef _WIN32
     struct passwd *pw = NULL;
     // Search a couple of usernames for one to use

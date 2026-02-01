@@ -350,12 +350,14 @@ static void cmd_test_hashing (int argc, char **argv, void *conf) {
     exit(errors);
 }
 
-static void cmd_test_benchmark (int argc, char **argv, void *conf) {
-    int seconds=1;
-    if(argv[1]) {
-        seconds = atoi(argv[1]);
-    }
-    benchmark_run(seconds);
+static void cmd_test_benchmark (int argc, char **argv, void *_conf) {
+    n2n_edge_conf_t *conf = (n2n_edge_conf_t *)_conf;
+
+    // TODO:
+    // - provide a way to run a partial set of benchmarks
+    // - provide a way to output in normalised or raw numbers
+
+    benchmark_run(conf->benchmark_seconds);
     exit(0);
 }
 

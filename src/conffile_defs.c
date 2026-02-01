@@ -399,6 +399,19 @@ static struct n3n_conf_option section_supernode[] = {
     {.name = NULL},
 };
 
+static struct n3n_conf_option section_test[] = {
+    {
+        .name = "benchmark_seconds",
+        .type = n3n_conf_uint32,
+        .offset = offsetof(n2n_edge_conf_t, benchmark_seconds),
+        .desc = "Duration of each benchmark test",
+        .help = "This allows the amount of time spent on running the built-in "
+                "benchmark tests to be adjusted.  Larger numbers will "
+                "produce more accurate results, but will obviously take more "
+                "time to complete. (Integer numbers of seconds only)",
+    },
+};
+
 static struct n3n_conf_option section_tuntap[] = {
     {
         .name = "address",
@@ -467,6 +480,11 @@ void n3n_initfuncs_conffile_defs () {
         "tuntap",
         "Settings specific to the local tuntap device",
         section_tuntap
+    );
+    n3n_config_register_section(
+        "test",
+        "Settings related running built-in tests and benchmarks",
+        section_test
     );
     n3n_config_register_section(
         "supernode",

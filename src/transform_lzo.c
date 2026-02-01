@@ -147,8 +147,8 @@ static void bench_lzo_teardown (void *data) {
 }
 
 static uint64_t bench_lzo_comp_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
-    int input_size = benchmark_test_data[TEST_DATA_32x16].size;
-    void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
+    const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
+    const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
 
     uint8_t outbuf[(input_size * 2) / 16 + 64 + 3];
     lzo_uint compression_len = 0;

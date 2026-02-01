@@ -34,14 +34,14 @@ struct bench_item {
 };
 
 struct test_data {
-    int size;
-    void *data;
+    const int size;
+    const void *data;
 };
 
 #define TEST_DATA_32x16 0   // 32 repeats of 16 bytes
 #define TEST_DATA_COUNT 1
 
-extern struct test_data benchmark_test_data[TEST_DATA_COUNT];
+extern const struct test_data benchmark_test_data[TEST_DATA_COUNT];
 
 void n3n_benchmark_register (struct bench_item *);
 

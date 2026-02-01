@@ -252,7 +252,7 @@ void benchmark_run_all (const int seconds) {
 }
 
 /* *INDENT-OFF* */
-static uint8_t test_data[]={
+static const uint8_t test_data[]={
   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
@@ -272,7 +272,7 @@ static uint8_t test_data[]={
 };
 /* *INDENT-ON* */
 
-struct test_data benchmark_test_data[TEST_DATA_COUNT] = {
+const struct test_data benchmark_test_data[TEST_DATA_COUNT] = {
     [TEST_DATA_32x16] = {
         .size = sizeof(test_data),
         .data = &test_data,

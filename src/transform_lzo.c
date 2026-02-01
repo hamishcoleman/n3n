@@ -138,30 +138,6 @@ int n2n_transop_lzo_init (const n2n_edge_conf_t *conf, n2n_trans_op_t *ttt) {
     return 0;
 }
 
-// TODO: this buffer is duplicated in multiple places, refactor to avoid
-// repeating it
-//
-/* *INDENT-OFF* */
-static uint8_t test_data[]={
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-};
-/* *INDENT-ON* */
-
 static void *bench_lzo_setup (void) {
     return calloc(1, sizeof(transop_lzo_t));
 }
@@ -171,14 +147,17 @@ static void bench_lzo_teardown (void *data) {
 }
 
 static uint64_t bench_lzo_comp_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
-    uint8_t outbuf[sizeof(test_data) + sizeof(test_data) / 16 + 64 + 3];
+    int input_size = 0x200;
+    void *test_data = benchmark_get_test_data(TEST_DATA_32x16, input_size);
+
+    uint8_t outbuf[(input_size * 2) / 16 + 64 + 3];
     lzo_uint compression_len = 0;
 
     transop_lzo_t *priv = (transop_lzo_t *)data;
 
     int result = lzo1x_1_compress(
         test_data,
-        sizeof(test_data),
+        input_size,
         outbuf,
         &compression_len,
         priv->wrkmem
@@ -189,7 +168,7 @@ static uint64_t bench_lzo_comp_run (void *data, uint64_t *bytes_in, uint64_t *by
         compression_len = 0;
     }
 
-    *bytes_in = sizeof(test_data);
+    *bytes_in = input_size;
     *bytes_out = compression_len;
     return outbuf[0];
 }

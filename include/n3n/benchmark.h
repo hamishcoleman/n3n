@@ -33,8 +33,11 @@ struct bench_item {
     uint64_t instr;     // how many CPU instructions retired
 };
 
+#define TEST_DATA_32x16 1   // 32 repeats of 16 bytes
+
 void n3n_benchmark_register (struct bench_item *);
 
+void *benchmark_get_test_data (int data_nr, int data_size);
 void benchmark_run_all (int seconds);
 
 #endif

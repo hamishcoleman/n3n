@@ -220,59 +220,55 @@ uint16_t pearson_hash_16 (const uint8_t *in, size_t len) {
     return pearson_hash_64(in, len);
 }
 
-// TODO: this buffer is duplicated in test_hashing.c, refactor to avoid
-// repeating it
-//
-/* *INDENT-OFF* */
-static uint8_t test_data[]={
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 };
-/* *INDENT-ON* */
 
 static void *bench_pearson_setup (void) {
-    return NULL;
+    // largest result size plus one for the length
+    return malloc(32 + 1);
 }
 
 static void bench_pearson_teardown (void *data) {
-    return;
+    return free(data);
 }
 
 static uint64_t bench_64_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
-    uint64_t hash = pearson_hash_64(test_data, sizeof(test_data));
-    *bytes_in = sizeof(test_data);
+    uint64_t *result = (uint64_t *)data;
+    uint8_t *bytes = (uint8_t *)data;
+
+    int input_size = 0x200;
+    void *test_data = benchmark_get_test_data(TEST_DATA_32x16, input_size);
+
+    *result = pearson_hash_64(test_data, input_size);
+    *bytes_in = input_size;
     *bytes_out = 8;
-    return hash;
+    bytes[32] = *bytes_out;
+    return 0;
 }
 
 static uint64_t bench_128_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
-    uint8_t hash[16];
-    pearson_hash_128(hash, test_data, sizeof(test_data));
-    *bytes_in = sizeof(test_data);
+    uint8_t *bytes = (uint8_t *)data;
+
+    int input_size = 0x200;
+    void *test_data = benchmark_get_test_data(TEST_DATA_32x16, input_size);
+
+    pearson_hash_128(data, test_data, input_size);
+    *bytes_in = input_size;
     *bytes_out = 16;
-    return hash[0];
+    bytes[32] = *bytes_out;
+    return 0;
 }
 
 static uint64_t bench_256_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
-    uint8_t hash[32];
-    pearson_hash_256(hash, test_data, sizeof(test_data));
-    *bytes_in = sizeof(test_data);
+    uint8_t *bytes = (uint8_t *)data;
+
+    int input_size = 0x200;
+    void *test_data = benchmark_get_test_data(TEST_DATA_32x16, input_size);
+
+    pearson_hash_256(data, test_data, input_size);
+    *bytes_in = input_size;
     *bytes_out = 32;
-    return hash[0];
+    bytes[32] = *bytes_out;
+    return 0;
 }
 
 static struct bench_item bench_64 = {

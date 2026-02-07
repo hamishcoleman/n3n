@@ -155,7 +155,7 @@ static void bench_lzo_teardown (void *ctx) {
     free(ctx);
 }
 
-static ssize_t bench_lzo_comp_run (
+static const ssize_t bench_lzo_comp_run (
     void *_ctx,
     const void *data_in,
     const ssize_t data_in_size,
@@ -182,7 +182,7 @@ static ssize_t bench_lzo_comp_run (
     return ctx->outbuf_size;
 }
 
-static ssize_t bench_lzo_uncomp_run (
+static const ssize_t bench_lzo_uncomp_run (
     void *_ctx,
     const void *data_in,
     const ssize_t data_in_size,

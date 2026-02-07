@@ -239,7 +239,7 @@ static void bench_pearson_teardown (void *ctx) {
     return free(ctx);
 }
 
-static ssize_t bench_16_run (
+static const ssize_t bench_16_run (
     void *ctx,
     const void *data_in,
     const ssize_t data_in_size,
@@ -275,7 +275,7 @@ static int bench_16_check (void *ctx, int level) {
     return 0;
 }
 
-static ssize_t bench_32_run (
+static const ssize_t bench_32_run (
     void *ctx,
     const void *data_in,
     const ssize_t data_in_size,
@@ -311,7 +311,7 @@ static int bench_32_check (void *ctx, int level) {
     return 0;
 }
 
-static ssize_t bench_64_run (
+static const ssize_t bench_64_run (
     void *ctx,
     const void *data_in,
     const ssize_t data_in_size,
@@ -347,7 +347,7 @@ static int bench_64_check (void *ctx, int level) {
     return 0;
 }
 
-static ssize_t bench_128_run (
+static const ssize_t bench_128_run (
     void *ctx,
     const void *data_in,
     const ssize_t data_in_size,
@@ -361,7 +361,7 @@ static ssize_t bench_128_run (
     return bytes[32];
 }
 
-static ssize_t bench_256_run (
+static const ssize_t bench_256_run (
     void *ctx,
     const void *data_in,
     const ssize_t data_in_size,

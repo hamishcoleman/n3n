@@ -375,7 +375,7 @@ static void bench_curve25519_teardown (void *ctx) {
     return;
 }
 
-static ssize_t bench_curve25519_run (
+static const ssize_t bench_curve25519_run (
     void *ctx,
     const void *data_in,
     const ssize_t data_in_size,

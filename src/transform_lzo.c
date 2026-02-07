@@ -165,8 +165,8 @@ static void bench_lzo_teardown (void *data) {
 
 static uint64_t bench_lzo_comp_run (void *_data, uint64_t *bytes_in, uint64_t *bytes_out) {
     struct bench_data *data = (struct bench_data *)_data;
-    const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
-    const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
+    const int input_size = benchmark_test_data[test_data_32x16].size;
+    const void *test_data = benchmark_test_data[test_data_32x16].data;
 
     data->outbuf_size = 0;
 

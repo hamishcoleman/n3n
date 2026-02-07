@@ -41,9 +41,11 @@ struct test_data {
     const void *data;
 };
 
-#define TEST_DATA_32x16 0   // 32 repeats of 16 bytes
-#define TEST_DATA_COUNT 1
+enum n3n_test_data {
+    test_data_32x16 = 0,
+};
 
+#define TEST_DATA_COUNT 1
 extern const struct test_data benchmark_test_data[TEST_DATA_COUNT];
 
 void n3n_benchmark_register (struct bench_item *);

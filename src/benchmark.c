@@ -305,7 +305,7 @@ static const uint8_t test_data[]={
 /* *INDENT-ON* */
 
 const struct test_data benchmark_test_data[TEST_DATA_COUNT] = {
-    [TEST_DATA_32x16] = {
+    [test_data_32x16] = {
         .size = sizeof(test_data),
         .data = &test_data,
     },

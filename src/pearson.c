@@ -249,8 +249,8 @@ static uint64_t bench_16_run (void *data, uint64_t *bytes_in, uint64_t *bytes_ou
     uint16_t *result = (uint16_t *)data;
     uint8_t *bytes = (uint8_t *)data;
 
-    const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
-    const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
+    const int input_size = benchmark_test_data[test_data_32x16].size;
+    const void *test_data = benchmark_test_data[test_data_32x16].data;
 
     *result = pearson_hash_16(test_data, input_size);
     *bytes_in = input_size;
@@ -284,8 +284,8 @@ static uint64_t bench_32_run (void *data, uint64_t *bytes_in, uint64_t *bytes_ou
     uint32_t *result = (uint32_t *)data;
     uint8_t *bytes = (uint8_t *)data;
 
-    const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
-    const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
+    const int input_size = benchmark_test_data[test_data_32x16].size;
+    const void *test_data = benchmark_test_data[test_data_32x16].data;
 
     *result = pearson_hash_32(test_data, input_size);
     *bytes_in = input_size;
@@ -319,8 +319,8 @@ static uint64_t bench_64_run (void *data, uint64_t *bytes_in, uint64_t *bytes_ou
     uint64_t *result = (uint64_t *)data;
     uint8_t *bytes = (uint8_t *)data;
 
-    const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
-    const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
+    const int input_size = benchmark_test_data[test_data_32x16].size;
+    const void *test_data = benchmark_test_data[test_data_32x16].data;
 
     *result = pearson_hash_64(test_data, input_size);
     *bytes_in = input_size;
@@ -353,8 +353,8 @@ static int bench_64_check (void *data, int level) {
 static uint64_t bench_128_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
     uint8_t *bytes = (uint8_t *)data;
 
-    const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
-    const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
+    const int input_size = benchmark_test_data[test_data_32x16].size;
+    const void *test_data = benchmark_test_data[test_data_32x16].data;
 
     pearson_hash_128(data, test_data, input_size);
     *bytes_in = input_size;
@@ -366,8 +366,8 @@ static uint64_t bench_128_run (void *data, uint64_t *bytes_in, uint64_t *bytes_o
 static uint64_t bench_256_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
     uint8_t *bytes = (uint8_t *)data;
 
-    const int input_size = benchmark_test_data[TEST_DATA_32x16].size;
-    const void *test_data = benchmark_test_data[TEST_DATA_32x16].data;
+    const int input_size = benchmark_test_data[test_data_32x16].size;
+    const void *test_data = benchmark_test_data[test_data_32x16].data;
 
     pearson_hash_256(data, test_data, input_size);
     *bytes_in = input_size;

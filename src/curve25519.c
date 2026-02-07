@@ -170,7 +170,7 @@ static void square (unsigned int out[32], const unsigned int a[32]) {
 
 
 static void crv_select (unsigned int p[64], unsigned int q[64], const unsigned int r[64],
-                    const unsigned int s[64], unsigned int b) {
+                        const unsigned int s[64], unsigned int b) {
 
     unsigned int j;
     unsigned int t;

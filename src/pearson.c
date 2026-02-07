@@ -375,7 +375,7 @@ static size_t bench_256_run (
     return bytes[32];
 }
 
-const void *const bench_get_output(void *const ctx) {
+const void *const bench_get_output (void *const ctx) {
     return ctx;
 }
 

@@ -180,7 +180,7 @@ static size_t bench_lzo_comp_run (
     return ctx->outbuf_size;
 }
 
-const void *const bench_lzo_get_output(void *const _ctx) {
+const void *const bench_lzo_get_output (void *const _ctx) {
     struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
     return &ctx->outbuf;
 }

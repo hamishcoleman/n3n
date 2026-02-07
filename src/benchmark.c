@@ -36,7 +36,7 @@ static long perf_event_open (
     return ret;
 }
 
-static int _perf_setup1 (struct bench_item *item, int id,uint64_t config) {
+static int _perf_setup1 (struct bench_item *item, int id, uint64_t config) {
     struct perf_event_attr pe;
 
     memset(&pe, 0, sizeof(pe));
@@ -229,7 +229,7 @@ static struct bench_item bench_nop = {
     .data_out = test_data_none,
 };
 
-int generic_check(
+int generic_check (
     const struct bench_item *const p,
     const void *const got,
     const size_t got_size,

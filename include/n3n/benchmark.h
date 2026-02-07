@@ -27,15 +27,15 @@ struct bench_item {
     const char *variant;                  // variant, eg name of optimisation
     int flags;
     void *(*const setup)(void);           // Any pre-run setup
-    size_t (*const run)(
+    size_t(*const run)(
         void *const ctx,
         const void *data_in,
         const size_t data_in_size,
         size_t *const bytes_in
     );
-    int (*const check)(void *const ctx, const int level);   // Custom check fn
+    int(*const check)(void *const ctx, const int level);   // Custom check fn
     const void *const (*const get_output)(void *const ctx);
-    void (*const teardown)(void *const ctx);   // destroy any setup done
+    void(*const teardown)(void *const ctx);   // destroy any setup done
     enum n3n_test_data data_in;     // What test_data buffer to use as input
     enum n3n_test_data data_out;    // What test_data buffer to check output
 

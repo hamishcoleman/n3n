@@ -375,11 +375,11 @@ static void bench_curve25519_teardown (void *ctx) {
     return;
 }
 
-static uint64_t bench_curve25519_run (
+static size_t bench_curve25519_run (
     void *ctx,
     const void *data_in,
-    const uint64_t data_in_size,
-    uint64_t *bytes_in
+    const size_t data_in_size,
+    size_t *bytes_in
 ) {
     uint8_t q[32];
     curve25519(q, test_data_k, test_data_b);

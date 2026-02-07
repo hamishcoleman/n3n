@@ -210,11 +210,11 @@ static void bench_nop_teardown (void *ctx) {
     return;
 }
 
-static uint64_t bench_nop_run (
+static size_t bench_nop_run (
     void *ctx,
     const void *data_in,
-    const uint64_t data_in_size,
-    uint64_t *in
+    const size_t data_in_size,
+    size_t *in
 ) {
     *in = 0;
     return 0;
@@ -282,9 +282,9 @@ static void run_one_item (const int seconds, struct bench_item *item) {
     perf_measure_start(item);
 
     while(!alarm_fired) {
-        uint64_t count_in;
+        size_t count_in;
 
-        uint64_t count_out = item->run(
+        size_t count_out = item->run(
             ctx,
             input_data,
             input_size,
@@ -368,9 +368,9 @@ int benchmark_check_all (int level) {
         const int input_size = benchmark_test_data[p->data_in].size;
         const void *input_data = benchmark_test_data[p->data_in].data;
 
-        uint64_t count_in;
+        size_t count_in;
 
-        uint64_t count_out = p->run(
+        size_t count_out = p->run(
             ctx,
             input_data,
             input_size,

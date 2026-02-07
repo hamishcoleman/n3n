@@ -7,6 +7,7 @@
 #ifndef _N3N_BENCHMARK_H_
 #define _N3N_BENCHMARK_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 enum n3n_test_data {
@@ -26,11 +27,11 @@ struct bench_item {
     const char *variant;                  // variant, eg name of optimisation
     int flags;
     void *(*const setup)(void);           // Any pre-run setup
-    uint64_t (*const run)(
+    size_t (*const run)(
         void *const ctx,
         const void *data_in,
-        const uint64_t data_in_size,
-        uint64_t *const bytes_in
+        const size_t data_in_size,
+        size_t *const bytes_in
     );
     int (*const check)(void *const ctx, const int level);   // Custom check fn
     const void *const (*const get_output)(void *const ctx);
@@ -45,8 +46,8 @@ struct bench_item {
     // Returned Results
     int sec;            // How many seconds did we run for
     int usec;           // add how many microseconds
-    uint64_t bytes_in;  // Total input bytes processed by all the runs
-    uint64_t bytes_out; // Total output bytes processed by all the runs
+    size_t bytes_in;  // Total input bytes processed by all the runs
+    size_t bytes_out; // Total output bytes processed by all the runs
     uint64_t loops;     // How many loops did we get
     uint64_t cycles;    // how many CPU cycles elapsed
     uint64_t instr;     // how many CPU instructions retired

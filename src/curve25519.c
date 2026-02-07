@@ -371,16 +371,20 @@ static void *bench_curve25519_setup (void) {
     return NULL;
 }
 
-static void bench_curve25519_teardown (void *data) {
+static void bench_curve25519_teardown (void *ctx) {
     return;
 }
 
-static uint64_t bench_curve25519_run (void *data, uint64_t *bytes_in, uint64_t *bytes_out) {
+static uint64_t bench_curve25519_run (
+    void *ctx,
+    const void *data_in,
+    const uint64_t data_in_size,
+    uint64_t *bytes_in
+) {
     uint8_t q[32];
     curve25519(q, test_data_k, test_data_b);
     *bytes_in = 32;
-    *bytes_out = 32;
-    return q[0];
+    return 32;
 }
 
 static struct bench_item bench_curve25519 = {
@@ -388,6 +392,7 @@ static struct bench_item bench_curve25519 = {
     .setup = bench_curve25519_setup,
     .run = bench_curve25519_run,
     .teardown = bench_curve25519_teardown,
+    .data_in = test_data_none,
 };
 
 void n3n_initfuncs_curve25519 (void) {

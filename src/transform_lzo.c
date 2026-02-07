@@ -149,60 +149,62 @@ static const uint8_t expected_lzo_data[] = {
 };
 static const int expected_lzo_size = 0x2f;
 
-struct bench_data {
+struct bench_ctx {
     transop_lzo_t priv;
     uint8_t outbuf[(0x200 * 2) / 16 + 64 + 3];
     lzo_uint outbuf_size;
 };
 
 static void *bench_lzo_setup (void) {
-    return calloc(1, sizeof(struct bench_data));
+    return calloc(1, sizeof(struct bench_ctx));
 }
 
-static void bench_lzo_teardown (void *data) {
-    free(data);
+static void bench_lzo_teardown (void *ctx) {
+    free(ctx);
 }
 
-static uint64_t bench_lzo_comp_run (void *_data, uint64_t *bytes_in, uint64_t *bytes_out) {
-    struct bench_data *data = (struct bench_data *)_data;
-    const int input_size = benchmark_test_data[test_data_32x16].size;
-    const void *test_data = benchmark_test_data[test_data_32x16].data;
+static uint64_t bench_lzo_comp_run (
+    void *_ctx,
+    const void *data_in,
+    const uint64_t data_in_size,
+    uint64_t *bytes_in
+) {
+    struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
 
-    data->outbuf_size = 0;
+    ctx->outbuf_size = 0;
 
     int result = lzo1x_1_compress(
-        test_data,
-        input_size,
-        data->outbuf,
-        &data->outbuf_size,
-        data->priv.wrkmem
+        data_in,
+        data_in_size,
+        ctx->outbuf,
+        &ctx->outbuf_size,
+        ctx->priv.wrkmem
     );
 
     if(result != LZO_E_OK) {
         traceEvent(TRACE_ERROR, "encode_lzo compression error");
-        data->outbuf_size = 0;
+        ctx->outbuf_size = 0;
     }
 
-    *bytes_in = input_size;
-    *bytes_out = data->outbuf_size;
-    return 0;
+    *bytes_in = data_in_size;
+    return ctx->outbuf_size;
 }
 
-static int bench_lzo_comp_check (void *_data, int level) {
-    struct bench_data *data = (struct bench_data *)_data;
+static int bench_lzo_comp_check (void *_ctx, int level) {
+    struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
 
     if(level) {
         printf("%s: output:\n", "lzo_comp");
-        fhexdump(0, data->outbuf, data->outbuf_size, stdout);
+        fhexdump(0, ctx->outbuf, ctx->outbuf_size, stdout);
         printf("\n");
     }
 
-    if(data->outbuf_size != expected_lzo_size) {
+    if(ctx->outbuf_size != expected_lzo_size) {
         // wrong size is an error
         return 1;
     }
 
-    if(memcmp(data->outbuf, &expected_lzo_data, expected_lzo_size) != 0) {
+    if(memcmp(ctx->outbuf, &expected_lzo_data, expected_lzo_size) != 0) {
         // not matching expected result is an error
         return 1;
     }
@@ -222,6 +224,7 @@ static struct bench_item bench_lzo_comp = {
     .run = bench_lzo_comp_run,
     .check = bench_lzo_comp_check,
     .teardown = bench_lzo_teardown,
+    .data_in = test_data_32x16,
 };
 
 void n3n_initfuncs_transform_lzo () {

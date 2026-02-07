@@ -135,18 +135,59 @@ void n3n_benchmark_register (struct bench_item *item) {
     registered_items = item;
 }
 
+/* *INDENT-OFF* */
+static const uint8_t test_data[]={
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+};
+/* *INDENT-ON* */
+
+struct test_data {
+    const int size;
+    const void *data;
+};
+
+const struct test_data benchmark_test_data[] = {
+    [test_data_none] = {
+        .size = 0,
+        .data = NULL,
+    },
+    [test_data_32x16] = {
+        .size = sizeof(test_data),
+        .data = &test_data,
+    },
+};
+
 /* A do-nothing function to time the benchmark framework */
 static void *bench_nop_setup (void) {
     return NULL;
 }
 
-static void bench_nop_teardown (void *data) {
+static void bench_nop_teardown (void *ctx) {
     return;
 }
 
-static uint64_t bench_nop_run (void *data, uint64_t *in, uint64_t *out) {
+static uint64_t bench_nop_run (
+    void *ctx,
+    const void *data_in,
+    const uint64_t data_in_size,
+    uint64_t *in
+) {
     *in = 0;
-    *out = 0;
     return 0;
 }
 
@@ -155,6 +196,7 @@ static struct bench_item bench_nop = {
     .setup = bench_nop_setup,
     .run = bench_nop_run,
     .teardown = bench_nop_teardown,
+    .data_in = test_data_none,
 };
 
 static bool alarm_fired;
@@ -171,7 +213,9 @@ static void run_one_item (const int seconds, struct bench_item *item) {
 
     perf_setup(item);
 
-    void *data = item->setup();
+    void *ctx = item->setup();
+    const int input_size = benchmark_test_data[item->data_in].size;
+    const void *input_data = benchmark_test_data[item->data_in].data;
 
     int loops = 0;
     alarm_fired = false;
@@ -188,13 +232,17 @@ static void run_one_item (const int seconds, struct bench_item *item) {
     perf_measure_start(item);
 
     while(!alarm_fired) {
-        uint64_t in;
-        uint64_t out;
+        uint64_t count_in;
 
-        item->run(data, &in, &out);
+        uint64_t count_out = item->run(
+            ctx,
+            input_data,
+            input_size,
+            &count_in
+        );
         loops++;
-        item->bytes_in += in;
-        item->bytes_out += out;
+        item->bytes_in += count_in;
+        item->bytes_out += count_out;
 
 #ifdef _WIN32
         gettimeofday(&tv2, NULL);
@@ -209,7 +257,7 @@ static void run_one_item (const int seconds, struct bench_item *item) {
     perf_measure_collect(item);
     gettimeofday(&tv2, NULL);
 
-    item->teardown(data);
+    item->teardown(ctx);
 
 #ifdef _WIN32
     // Just do a half-arsed job on windows, which matches their ability to
@@ -266,50 +314,28 @@ int benchmark_check_all (int level) {
         }
         fprintf(stderr, ": ");
 
-        void *data = p->setup();
+        void *ctx = p->setup();
+        const int input_size = benchmark_test_data[p->data_in].size;
+        const void *input_data = benchmark_test_data[p->data_in].data;
 
-        uint64_t in;
-        uint64_t out;
+        uint64_t count_in;
 
-        p->run(data, &in, &out);
+        p->run(
+            ctx,
+            input_data,
+            input_size,
+            &count_in
+        );
 
         fprintf(stderr, "tested\n");
 
-        result += p->check(data, level);
+        result += p->check(ctx, level);
 
-        p->teardown(data);
+        p->teardown(ctx);
     }
 
     return result;
 }
-
-/* *INDENT-OFF* */
-static const uint8_t test_data[]={
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
-  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-};
-/* *INDENT-ON* */
-
-const struct test_data benchmark_test_data[TEST_DATA_COUNT] = {
-    [test_data_32x16] = {
-        .size = sizeof(test_data),
-        .data = &test_data,
-    },
-};
 
 void n3n_initfuncs_benchmark () {
     n3n_benchmark_register(&bench_nop);

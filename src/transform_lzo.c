@@ -141,7 +141,9 @@ int n2n_transop_lzo_init (const n2n_edge_conf_t *conf, n2n_trans_op_t *ttt) {
 
 struct bench_ctx {
     transop_lzo_t priv;
-    uint8_t outbuf[(0x200 * 2) / 16 + 64 + 3];
+    // for compression, want a outbuf (0x200 * 2) / 16 + 64 + 3 bytes
+    // for uncompression, want to be able to test the largest expected MTU
+    uint8_t outbuf[2048];
     lzo_uint outbuf_size;
 };
 
@@ -180,6 +182,28 @@ static size_t bench_lzo_comp_run (
     return ctx->outbuf_size;
 }
 
+static size_t bench_lzo_uncomp_run (
+    void *_ctx,
+    const void *data_in,
+    const size_t data_in_size,
+    size_t *bytes_in
+) {
+    struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
+
+    ctx->outbuf_size = sizeof(ctx->outbuf);
+
+    lzo1x_decompress(
+        data_in,
+        data_in_size,
+        ctx->outbuf,
+        &ctx->outbuf_size,
+        NULL
+    );
+
+    *bytes_in = data_in_size;
+    return ctx->outbuf_size;
+}
+
 const void *const bench_lzo_get_output (void *const _ctx) {
     struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
     return &ctx->outbuf;
@@ -201,7 +225,18 @@ static struct bench_item bench_lzo_comp = {
     .data_out = test_data_lzo,
 };
 
+static struct bench_item bench_lzo_uncomp = {
+    .name = "lzo_uncomp",
+    .setup = bench_lzo_setup,
+    .run = bench_lzo_uncomp_run,
+    .get_output = bench_lzo_get_output,
+    .teardown = bench_lzo_teardown,
+    .data_in = test_data_lzo,
+    .data_out = test_data_32x16,
+};
+
 void n3n_initfuncs_transform_lzo () {
     n3n_transform_register(&transform);
     n3n_benchmark_register(&bench_lzo_comp);
+    n3n_benchmark_register(&bench_lzo_uncomp);
 }

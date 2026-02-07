@@ -210,7 +210,7 @@ static void bench_nop_teardown (void *ctx) {
     return;
 }
 
-static ssize_t bench_nop_run (
+static const ssize_t bench_nop_run (
     void *ctx,
     const void *data_in,
     const ssize_t data_in_size,
@@ -340,7 +340,7 @@ void benchmark_run_all (const int seconds) {
         run_one_item(seconds, p);
 
         printf("%i.%06i,", p->sec, p->usec);
-        printf("%" PRIu64 ",%" PRIu64 ",", p->bytes_in, p->bytes_out);
+        printf("%zd,%zd,", p->bytes_in, p->bytes_out);
         printf(
             "%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n",
             p->loops,

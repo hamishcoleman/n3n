@@ -229,16 +229,10 @@ uint16_t pearson_hash_16 (const uint8_t *in, size_t len) {
 static const uint16_t expected_pearson_hash_16 = 0x8be;
 static const uint32_t expected_pearson_hash_32 = 0x2ea108be;
 static const uint64_t expected_pearson_hash_64 = 0xb2d98fa82ea108be;
-static const uint8_t expected_pearson_hash_256[] = {
-    0x40,0x09,0x5c,0xca,0x28,0x6b,0xfb,0x93,
-    0x4c,0x4a,0xf7,0xc0,0x79,0xa8,0x04,0x5a,
-    0xb5,0x3d,0xcf,0xb3,0xa7,0xed,0x18,0x56,
-    0xb2,0xd9,0x8f,0xa8,0x2e,0xa1,0x08,0xbe,
-};
 
 static void *bench_pearson_setup (void) {
     // largest result size plus one for the length
-    return malloc(sizeof(expected_pearson_hash_256) + 1);
+    return malloc(32 + 1);
 }
 
 static void bench_pearson_teardown (void *ctx) {
@@ -381,27 +375,8 @@ static uint64_t bench_256_run (
     return bytes[32];
 }
 
-static int bench_buf_check (void *ctx, int level) {
-    uint8_t *bytes = (uint8_t *)ctx;
-    int data_size = bytes[32];
-
-    if(level) {
-        printf("%s: output:\n", "pearson_hash");
-        fhexdump(0, ctx, data_size, stdout);
-        printf("\n");
-    }
-
-    if(data_size != 16 && data_size != 32) {
-        // wrong size is an error
-        return 1;
-    }
-
-    if(memcmp(ctx, &expected_pearson_hash_256[32-data_size], data_size) != 0) {
-        // not matching expected result is an error
-        return 1;
-    }
-
-    return 0;
+const void *const bench_get_output(void *const ctx) {
+    return ctx;
 }
 
 static struct bench_item bench_16 = {
@@ -438,9 +413,10 @@ static struct bench_item bench_128 = {
     .flags = BENCH_ITEM_CHECKONLY,
     .setup = bench_pearson_setup,
     .run = bench_128_run,
-    .check = bench_buf_check,
+    .get_output = bench_get_output,
     .teardown = bench_pearson_teardown,
     .data_in = test_data_32x16,
+    .data_out = test_data_pearson_128,
 };
 
 static struct bench_item bench_256 = {
@@ -448,9 +424,10 @@ static struct bench_item bench_256 = {
     .flags = BENCH_ITEM_CHECKONLY,
     .setup = bench_pearson_setup,
     .run = bench_256_run,
-    .check = bench_buf_check,
+    .get_output = bench_get_output,
     .teardown = bench_pearson_teardown,
     .data_in = test_data_32x16,
+    .data_out = test_data_pearson_256,
 };
 
 void n3n_initfuncs_pearson (void) {

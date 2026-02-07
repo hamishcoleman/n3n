@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <n3n/benchmark.h>
+#include <n3n/hexdump.h>  // for fhexdump
 #include <signal.h>
 #include <stdbool.h>            // for true, false
 #include <stdio.h>
@@ -136,7 +137,7 @@ void n3n_benchmark_register (struct bench_item *item) {
 }
 
 /* *INDENT-OFF* */
-static const uint8_t test_data[]={
+static const uint8_t _test_data_32x16[]={
   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
@@ -156,6 +157,22 @@ static const uint8_t test_data[]={
 };
 /* *INDENT-ON* */
 
+static const uint8_t _test_data_pearson_256[] = {
+    0x40,0x09,0x5c,0xca,0x28,0x6b,0xfb,0x93,
+    0x4c,0x4a,0xf7,0xc0,0x79,0xa8,0x04,0x5a,
+    0xb5,0x3d,0xcf,0xb3,0xa7,0xed,0x18,0x56,
+    0xb2,0xd9,0x8f,0xa8,0x2e,0xa1,0x08,0xbe,
+};
+
+static const uint8_t _test_data_lzo[] = {
+    0x0d,0x00,0x01,0x02,0x03,0x04,0x05,0x06,
+    0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,
+    0x0f,0x20,0x00,0xbc,0x3c,0x00,0x00,0x02,
+    0x0c,0x0d,0x0e,0x0f,0x00,0x01,0x02,0x03,
+    0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,
+    0x0c,0x0d,0x0e,0x0f,0x11,0x00,0x00,
+};
+
 struct test_data {
     const int size;
     const void *data;
@@ -167,8 +184,20 @@ const struct test_data benchmark_test_data[] = {
         .data = NULL,
     },
     [test_data_32x16] = {
-        .size = sizeof(test_data),
-        .data = &test_data,
+        .size = sizeof(_test_data_32x16),
+        .data = &_test_data_32x16,
+    },
+    [test_data_pearson_256] = {
+        .size = sizeof(_test_data_pearson_256),
+        .data = &_test_data_pearson_256,
+    },
+    [test_data_pearson_128] = {
+        .size = 16,
+        .data = &_test_data_pearson_256[16],
+    },
+    [test_data_lzo] = {
+        .size = sizeof(_test_data_lzo),
+        .data = &_test_data_lzo,
     },
 };
 
@@ -197,7 +226,28 @@ static struct bench_item bench_nop = {
     .run = bench_nop_run,
     .teardown = bench_nop_teardown,
     .data_in = test_data_none,
+    .data_out = test_data_none,
 };
+
+int generic_check(
+    const struct bench_item *const p,
+    const void *const got,
+    const size_t got_size,
+    const int level
+) {
+    if(got_size != benchmark_test_data[p->data_out].size) {
+        // unexpected size results in an error
+        return 1;
+    }
+
+    if(memcmp(benchmark_test_data[p->data_out].data, got, got_size) != 0) {
+        // not matching expected result is an error
+        return 1;
+    }
+
+    return 0;
+}
+
 
 static bool alarm_fired;
 
@@ -304,7 +354,7 @@ int benchmark_check_all (int level) {
     int result = 0;
 
     for(struct bench_item *p = registered_items; p; p = p->next) {
-        if(!p->check) {
+        if(p->data_out == test_data_none && !p->check) {
             continue;
         }
 
@@ -320,7 +370,7 @@ int benchmark_check_all (int level) {
 
         uint64_t count_in;
 
-        p->run(
+        uint64_t count_out = p->run(
             ctx,
             input_data,
             input_size,
@@ -329,8 +379,40 @@ int benchmark_check_all (int level) {
 
         fprintf(stderr, "tested\n");
 
-        result += p->check(ctx, level);
+        if(level) {
+            printf("%s: data_in id=%i\n", p->name, p->data_in);
+        }
 
+        bool checked = false;
+
+        if(p->check) {
+            result += p->check(ctx, level);
+            checked = true;
+        }
+
+        if(p->get_output) {
+            const void *out_data = p->get_output(ctx);
+
+            if(p->data_out != test_data_none) {
+                result += generic_check(p, out_data, count_out, level);
+                checked = true;
+            }
+
+            if(level) {
+                printf("%s: data_out:\n", p->name);
+                fhexdump(0, out_data, count_out, stdout);
+            }
+        }
+
+        // Sanity check for bad data structures
+        if(!checked) {
+            fprintf(stderr, "ERROR: neither check nor get_output available\n");
+            exit(1);
+        }
+
+        if(level) {
+            printf("\n");
+        }
         p->teardown(ctx);
     }
 

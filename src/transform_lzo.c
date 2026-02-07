@@ -139,16 +139,6 @@ int n2n_transop_lzo_init (const n2n_edge_conf_t *conf, n2n_trans_op_t *ttt) {
     return 0;
 }
 
-static const uint8_t expected_lzo_data[] = {
-    0x0d,0x00,0x01,0x02,0x03,0x04,0x05,0x06,
-    0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,
-    0x0f,0x20,0x00,0xbc,0x3c,0x00,0x00,0x02,
-    0x0c,0x0d,0x0e,0x0f,0x00,0x01,0x02,0x03,
-    0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,
-    0x0c,0x0d,0x0e,0x0f,0x11,0x00,0x00,
-};
-static const int expected_lzo_size = 0x2f;
-
 struct bench_ctx {
     transop_lzo_t priv;
     uint8_t outbuf[(0x200 * 2) / 16 + 64 + 3];
@@ -190,26 +180,9 @@ static uint64_t bench_lzo_comp_run (
     return ctx->outbuf_size;
 }
 
-static int bench_lzo_comp_check (void *_ctx, int level) {
+const void *const bench_lzo_get_output(void *const _ctx) {
     struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
-
-    if(level) {
-        printf("%s: output:\n", "lzo_comp");
-        fhexdump(0, ctx->outbuf, ctx->outbuf_size, stdout);
-        printf("\n");
-    }
-
-    if(ctx->outbuf_size != expected_lzo_size) {
-        // wrong size is an error
-        return 1;
-    }
-
-    if(memcmp(ctx->outbuf, &expected_lzo_data, expected_lzo_size) != 0) {
-        // not matching expected result is an error
-        return 1;
-    }
-
-    return 0;
+    return &ctx->outbuf;
 }
 
 static struct n3n_transform transform = {
@@ -222,9 +195,10 @@ static struct bench_item bench_lzo_comp = {
     .name = "lzo_comp",
     .setup = bench_lzo_setup,
     .run = bench_lzo_comp_run,
-    .check = bench_lzo_comp_check,
+    .get_output = bench_lzo_get_output,
     .teardown = bench_lzo_teardown,
     .data_in = test_data_32x16,
+    .data_out = test_data_lzo,
 };
 
 void n3n_initfuncs_transform_lzo () {

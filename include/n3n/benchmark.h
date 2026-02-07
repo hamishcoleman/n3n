@@ -12,6 +12,9 @@
 enum n3n_test_data {
     test_data_none = 0,
     test_data_32x16,
+    test_data_pearson_256,
+    test_data_pearson_128,
+    test_data_lzo,
 };
 
 #define BENCH_ITEM_CHECKONLY   0x1  // benchmark should be skipped
@@ -22,16 +25,18 @@ struct bench_item {
     const char *name;                     // What is this testing
     const char *variant;                  // variant, eg name of optimisation
     int flags;
-    void *(*setup)(void);           // Any pre-run setup
-    uint64_t (*run)(
-        void *ctx,
+    void *(*const setup)(void);           // Any pre-run setup
+    uint64_t (*const run)(
+        void *const ctx,
         const void *data_in,
         const uint64_t data_in_size,
         uint64_t *const bytes_in
     );
-    int (*check)(void *ctx, const int level);   // Check result against expected
-    void (*teardown)(void *ctx);   // destroy any setup done
+    int (*const check)(void *const ctx, const int level);   // Custom check fn
+    const void *const (*const get_output)(void *const ctx);
+    void (*const teardown)(void *const ctx);   // destroy any setup done
     enum n3n_test_data data_in;     // What test_data buffer to use as input
+    enum n3n_test_data data_out;    // What test_data buffer to check output
 
     // Perf processing tmp storage
     int fd[2];              // perf event fd (.0 == group leader)

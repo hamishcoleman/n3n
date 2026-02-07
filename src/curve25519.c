@@ -169,7 +169,7 @@ static void square (unsigned int out[32], const unsigned int a[32]) {
 }
 
 
-static void select (unsigned int p[64], unsigned int q[64], const unsigned int r[64],
+static void crv_select (unsigned int p[64], unsigned int q[64], const unsigned int r[64],
                     const unsigned int s[64], unsigned int b) {
 
     unsigned int j;
@@ -219,7 +219,7 @@ static void mainloop (unsigned int work[64], const unsigned char e[32]) {
     for(pos = 254; pos >= 0; --pos) {
         b = e[pos / 8] >> (pos & 7);
         b &= 1;
-        select(xzmb, xzm1b, xzm, xzm1, b);
+        crv_select(xzmb, xzm1b, xzm, xzm1, b);
         add(a0, xzmb, xzmb + 32);
         sub(a0 + 32, xzmb, xzmb + 32);
         add(a1, xzm1b, xzm1b + 32);
@@ -238,7 +238,7 @@ static void mainloop (unsigned int work[64], const unsigned char e[32]) {
         mult(xznb + 32, s, u);
         square(xzn1b, c1);
         mult(xzn1b + 32, r, work);
-        select(xzm, xzm1, xznb, xzn1b, b);
+        crv_select(xzm, xzm1, xznb, xzn1b, b);
     }
 
     for(j = 0; j < 64; ++j)
@@ -375,11 +375,11 @@ static void bench_curve25519_teardown (void *ctx) {
     return;
 }
 
-static size_t bench_curve25519_run (
+static ssize_t bench_curve25519_run (
     void *ctx,
     const void *data_in,
-    const size_t data_in_size,
-    size_t *bytes_in
+    const ssize_t data_in_size,
+    ssize_t *bytes_in
 ) {
     uint8_t q[32];
     curve25519(q, test_data_k, test_data_b);

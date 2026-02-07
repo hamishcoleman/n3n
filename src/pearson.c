@@ -239,11 +239,11 @@ static void bench_pearson_teardown (void *ctx) {
     return free(ctx);
 }
 
-static uint64_t bench_16_run (
+static ssize_t bench_16_run (
     void *ctx,
     const void *data_in,
-    const uint64_t data_in_size,
-    uint64_t *bytes_in
+    const ssize_t data_in_size,
+    ssize_t *bytes_in
 ) {
     uint16_t *result = (uint16_t *)ctx;
     uint8_t *bytes = (uint8_t *)ctx;
@@ -275,11 +275,11 @@ static int bench_16_check (void *ctx, int level) {
     return 0;
 }
 
-static size_t bench_32_run (
+static ssize_t bench_32_run (
     void *ctx,
     const void *data_in,
-    const size_t data_in_size,
-    size_t *bytes_in
+    const ssize_t data_in_size,
+    ssize_t *bytes_in
 ) {
     uint32_t *result = (uint32_t *)ctx;
     uint8_t *bytes = (uint8_t *)ctx;
@@ -311,13 +311,13 @@ static int bench_32_check (void *ctx, int level) {
     return 0;
 }
 
-static size_t bench_64_run (
+static ssize_t bench_64_run (
     void *ctx,
     const void *data_in,
-    const size_t data_in_size,
-    size_t *bytes_in
+    const ssize_t data_in_size,
+    ssize_t *bytes_in
 ) {
-    size_t *result = (size_t *)ctx;
+    uint64_t *result = (uint64_t *)ctx;
     uint8_t *bytes = (uint8_t *)ctx;
 
     *result = pearson_hash_64(data_in, data_in_size);
@@ -327,7 +327,7 @@ static size_t bench_64_run (
 }
 
 static int bench_64_check (void *ctx, int level) {
-    size_t *result = (size_t *)ctx;
+    uint64_t *result = (uint64_t *)ctx;
     if(level) {
         printf("%s: output = 0x%" PRIx64 "\n", "pearson_hash_64", *result);
         printf("\n");
@@ -347,11 +347,11 @@ static int bench_64_check (void *ctx, int level) {
     return 0;
 }
 
-static size_t bench_128_run (
+static ssize_t bench_128_run (
     void *ctx,
     const void *data_in,
-    const size_t data_in_size,
-    size_t *bytes_in
+    const ssize_t data_in_size,
+    ssize_t *bytes_in
 ) {
     uint8_t *bytes = (uint8_t *)ctx;
 
@@ -361,11 +361,11 @@ static size_t bench_128_run (
     return bytes[32];
 }
 
-static size_t bench_256_run (
+static ssize_t bench_256_run (
     void *ctx,
     const void *data_in,
-    const size_t data_in_size,
-    size_t *bytes_in
+    const ssize_t data_in_size,
+    ssize_t *bytes_in
 ) {
     uint8_t *bytes = (uint8_t *)ctx;
 

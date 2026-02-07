@@ -410,6 +410,7 @@ static struct n3n_conf_option section_test[] = {
                 "produce more accurate results, but will obviously take more "
                 "time to complete. (Integer numbers of seconds only)",
     },
+    {.name = NULL},
 };
 
 static struct n3n_conf_option section_tuntap[] = {

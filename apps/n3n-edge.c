@@ -340,12 +340,29 @@ static void cmd_test_config_roundtrip (int argc, char **argv, void *_conf) {
 
 static void cmd_test_benchmark (int argc, char **argv, void *_conf) {
     n2n_edge_conf_t *conf = (n2n_edge_conf_t *)_conf;
+    int level=0;
+    if(argc == 2) {
+        if(strcmp("pretty", argv[1])==0) {
+            level=0;
+        } else if(strcmp("raw", argv[1])==0) {
+            level=1;
+        } else {
+            printf(
+                "benchmark:\n"
+                "\n"
+                "  usage: n3n-edge test benchmark [mode]\n"
+                "\n"
+                "The mode can be `raw` or `pretty` and defaults to pretty\n"
+            );
+            exit(1);
+        }
+    }
 
     // TODO:
     // - provide a way to run a partial set of benchmarks
     // - provide a way to output in normalised or raw numbers
 
-    benchmark_run_all(conf->benchmark_seconds);
+    benchmark_run_all(level, conf->benchmark_seconds);
     exit(0);
 }
 

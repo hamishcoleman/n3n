@@ -323,30 +323,57 @@ static void run_one_item (const int seconds, struct bench_item *item) {
     item->usec = tv1.tv_usec;
 }
 
-void benchmark_run_all (const int seconds) {
+void benchmark_run_all (const int level, const int seconds) {
     struct bench_item *p;
 
-    printf("name,variant,seconds,bytes_in,bytes_out,loops,cycles,instr\n");
+    if(level==0) {
+        printf("Each benchmark test runs for %i seconds\n\n", seconds);
+    } else if(level==1) {
+        printf("name,variant,seconds,bytes_in,bytes_out,loops,cycles,instr\n");
+    }
+
     for(p = registered_items; p; p = p->next) {
         if(p->flags && BENCH_ITEM_CHECKONLY) {
             continue;
         }
+
         printf("%s,", p->name);
         if(p->variant) {
             printf("%s", p->variant);
         }
-        printf(",");
+        fflush(stdout);
+
+        if(level==1) {
+            printf(",");
+        }
 
         run_one_item(seconds, p);
 
-        printf("%i.%06i,", p->sec, p->usec);
-        printf("%zd,%zd,", p->bytes_in, p->bytes_out);
-        printf(
-            "%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n",
-            p->loops,
-            p->cycles,
-            p->instr
-        );
+        if(level==0) {
+            printf(
+                "  (%0.0f bytes) -> (%0.0f bytes)",
+                (float)p->bytes_in / p->loops,
+                (float)p->bytes_out / p->loops
+            );
+
+            if(p->cycles) {
+                printf(
+                    "  cycles/loop=%0.0f  ipc=%0.2f",
+                    (float)p->cycles / p->loops,
+                    (float)p->instr / p->cycles
+                );
+            }
+            printf("\n");
+        } else if(level==1) {
+            printf("%i.%06i,", p->sec, p->usec);
+            printf("%zd,%zd,", p->bytes_in, p->bytes_out);
+            printf(
+                "%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n",
+                p->loops,
+                p->cycles,
+                p->instr
+            );
+        }
     }
 }
 

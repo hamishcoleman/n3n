@@ -204,7 +204,7 @@ static const ssize_t bench_lzo_uncomp_run (
     return ctx->outbuf_size;
 }
 
-const void *const bench_lzo_get_output (void *const _ctx) {
+static const void *const bench_lzo_get_output (void *const _ctx) {
     struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
     return &ctx->outbuf;
 }

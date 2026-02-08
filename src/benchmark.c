@@ -337,28 +337,36 @@ void benchmark_run_all (const int level, const int seconds) {
             continue;
         }
 
-        printf("%s,", p->name);
-        if(p->variant) {
-            printf("%s", p->variant);
+        char name[40];
+        snprintf(
+            &name[0],
+            sizeof(name),
+            "%s,%s",
+            p->name,
+            p->variant ? p->variant : ""
+        );
+
+        if(level==0) {
+            printf("%-20s", name);
+        } else if(level==1) {
+            printf("%s,", name);
         }
         fflush(stdout);
-
-        if(level==1) {
-            printf(",");
-        }
 
         run_one_item(seconds, p);
 
         if(level==0) {
+            float seconds = ((float)p->usec / 1000000) + p->sec;
             printf(
-                "  (%0.0f bytes) -> (%0.0f bytes)",
+                "%6.1fMB/s (%0.0f bytes) -> (%0.0f bytes)",
+                (float)p->bytes_in / seconds / 1000000,
                 (float)p->bytes_in / p->loops,
                 (float)p->bytes_out / p->loops
             );
 
             if(p->cycles) {
                 printf(
-                    "  cycles/loop=%0.0f  ipc=%0.2f",
+                    " cycles/loop=%0.0f ipc=%0.2f",
                     (float)p->cycles / p->loops,
                     (float)p->instr / p->cycles
                 );

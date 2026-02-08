@@ -205,7 +205,9 @@ static void *bench_setup (void) {
     return ctx;
 }
 
-static void bench_teardown (void *ctx) {
+static void bench_teardown (void *_ctx) {
+    struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
+    speck_deinit(ctx->priv.ctx);
     free(ctx);
 }
 

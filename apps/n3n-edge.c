@@ -372,7 +372,9 @@ static void cmd_test_builtin (int argc, char **argv, void *conf) {
         level = atoi(argv[1]);
     }
     int errors = benchmark_check_all(level);
-    if(!errors) {
+    if(errors) {
+        printf("ERROR\n");
+    } else {
         printf("OK\n");
     }
     exit(errors);

@@ -418,10 +418,11 @@ int benchmark_check_all (int level) {
             printf("%s: data_in id=%i\n", p->name, p->data_in);
         }
 
+        int this_result = 0;
         bool checked = false;
 
         if(p->check) {
-            result += p->check(ctx, level);
+            this_result += p->check(ctx, level);
             checked = true;
         }
 
@@ -429,7 +430,7 @@ int benchmark_check_all (int level) {
             const void *out_data = p->get_output(ctx);
 
             if(p->data_out != test_data_none) {
-                result += generic_check(p, out_data, count_out, level);
+                this_result += generic_check(p, out_data, count_out, level);
                 checked = true;
             }
 
@@ -444,6 +445,11 @@ int benchmark_check_all (int level) {
             fprintf(stderr, "ERROR: neither check nor get_output available\n");
             exit(1);
         }
+
+        if(this_result) {
+            fprintf(stderr, "%s: Unexpected result\n", p->name);
+        }
+        result += this_result;
 
         if(level) {
             printf("\n");

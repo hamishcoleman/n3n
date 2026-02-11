@@ -1299,7 +1299,7 @@ static void sendto_sock (struct n3n_runtime_data *eee, const void * buf,
     }
 
     if(eee->sock < 0) {
-        traceEvent(TRACE_ERROR, "bad eee->sock");
+        traceEvent(TRACE_DEBUG, "bad eee->sock");
         // invalid socket file descriptor, e.g. TCP unconnected has fd of '-1'
         return;
     }

@@ -20,6 +20,8 @@ enum n3n_test_data {
     test_data_cc20,
     test_data_aes,
     test_data_tf,
+    test_data_pdu_v3,
+    test_data_pdu_eth,
 };
 
 #define BENCH_ITEM_CHECKONLY   0x1  // benchmark should be skipped

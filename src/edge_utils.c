@@ -2043,10 +2043,20 @@ static int handle_PACKET (struct n3n_runtime_data * eee,
     }
 #endif
 
-    if(eee->network_traffic_filter->filter_packet_from_peer(eee->network_traffic_filter, eee, orig_sender,
-                                                            eth_payload, eth_size) == N2N_DROP) {
-        traceEvent(TRACE_DEBUG, "filtered packet of size %u", (unsigned int)eth_size);
-        return(0);
+    if(eee->network_traffic_filter) {
+        if(eee->network_traffic_filter->filter_packet_from_peer(
+                    eee->network_traffic_filter,
+                    eee,
+                    orig_sender,
+                    eth_payload,
+                    eth_size) == N2N_DROP) {
+            traceEvent(
+                TRACE_DEBUG,
+                "filtered packet of size %u",
+                (unsigned int)eth_size
+            );
+            return(0);
+        }
     }
 
     /* Write ethernet packet to tap device. */

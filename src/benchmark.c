@@ -680,6 +680,9 @@ void benchmark_run_all (const int level, const int seconds) {
         printf("name,variant,seconds,bytes_in,bytes_out,loops,cycles,instr\n");
     }
 
+    float seconds_total = 0;
+    uint64_t cycles_total = 0;
+
     for(p = registered_items; p; p = p->next) {
         if(p->flags && BENCH_ITEM_CHECKONLY) {
             continue;
@@ -705,6 +708,8 @@ void benchmark_run_all (const int level, const int seconds) {
 
         if(level==0) {
             float seconds = ((float)p->usec / 1000000) + p->sec;
+            seconds_total += seconds;
+
             printf(
                 "%6.1fMB/s (%0.0f bytes) -> (%0.0f bytes)",
                 (float)p->bytes_in / seconds / 1000000,
@@ -713,6 +718,7 @@ void benchmark_run_all (const int level, const int seconds) {
             );
 
             if(p->cycles) {
+                cycles_total += p->cycles;
                 printf(
                     " cycles/loop=%0.0f ipc=%0.2f",
                     (float)p->cycles / p->loops,
@@ -730,6 +736,11 @@ void benchmark_run_all (const int level, const int seconds) {
                 p->instr
             );
         }
+    }
+
+    if(level==0) {
+        printf("\n");
+        printf("Bogo CPU speed %0.0fMhz\n", cycles_total/seconds_total/1000000);
     }
 }
 

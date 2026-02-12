@@ -79,7 +79,7 @@ static const ssize_t bench_pdu2tun_run (
     struct sockaddr sa;
     time_t now = time(NULL);
 
-    // Avoid attempt to send a reply to this PDU 
+    // Avoid attempt to send a reply to this PDU
     ctx->eee.sock = -1;
 
     process_pdu(

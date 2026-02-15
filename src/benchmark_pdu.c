@@ -67,6 +67,17 @@ static const void *const bench_get_output (void *const _ctx) {
     return &ctx->outbuf;
 }
 
+#ifdef _WIN32
+static int const bench_check_fake (void *const _ctx, const int level) {
+    // Since we cannot create a socketpair and read the PDU, we cannot run
+    // checks on windows.
+    // TODO:
+    // - this is a limitation of how tuntap devs are handled / selected
+    fprintf(stderr, "pdu2tun: WARN: cannot check on Win32 platform");
+    return 0;
+}
+#endif
+
 // TODO: use headers to declare this
 void process_pdu (struct n3n_runtime_data *eee,
                   const struct sockaddr *sender_sock,
@@ -118,19 +129,16 @@ static struct bench_item bench_pdu2tun = {
     .name = "pdu2tun",
     .setup = bench_setup,
     .run = bench_pdu2tun_run,
+#ifndef _WIN32
     .get_output = bench_get_output,
+#else
+    .check = bench_check_fake,
+#endif
     .teardown = bench_teardown,
     .data_in = test_data_pdu_v3,
     .data_out = test_data_pdu_eth,
 };
 
 void n3n_initfuncs_benchmark_pdu () {
-#ifndef _WIN32
-    // Since we cannot create a socketpair and read the PDU, we cannot run
-    // checks on windows.
-    // TODO:
-    // - this is a limitation of how tuntap devs are handled / selected
-    // - even if we cannot check, it would be good to benchmark
     n3n_benchmark_register(&bench_pdu2tun);
-#endif
 }

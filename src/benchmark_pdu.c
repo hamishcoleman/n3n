@@ -13,8 +13,11 @@
 #include <stddef.h>         // for NULL
 #include <stdio.h>          // for perror
 #include <stdlib.h>         // for calloc, free
-#include <sys/socket.h>     // for socketpair
 #include <unistd.h>         // for read
+
+#ifndef _WIN32
+#include <sys/socket.h>     // for socketpair
+#endif
 
 #include "peer_info.h"      // for peer_info_malloc
 

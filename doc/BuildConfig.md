@@ -140,8 +140,9 @@ can take in the optionally specified compiler flag `-O3`:
 
 `./configure CFLAGS="-O3"`
 
-The `tools/n3n-benchmark` tool reports speed-ups of 200% or more! There is no
-known risk in terms of instable code or so.
+The `n3n-edge test benchmark` tool can be used before and after to measure the
+speed-ups (some code paths will speed up by over 200%!) There is no known risk
+in terms of unstable code or so.
 
 ## Hardware Features
 

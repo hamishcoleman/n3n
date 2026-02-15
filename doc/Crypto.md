@@ -46,7 +46,7 @@ Twofish requires no padding as it employs a CBC/CTS scheme which can send out pl
 On Intel CPUs, Twofish usually is the slowest of the ciphers present. However,
 on Raspberry Pi 3B+, Twofish was observed to be faster than AES-CTS. Your
 mileage may vary. Cipher speed's can be compared running the
-`tools/n3n-benchmark` tool.
+`n3n-edge test benchmark` tool.
 
 ### AES
 

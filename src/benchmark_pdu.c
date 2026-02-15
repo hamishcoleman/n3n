@@ -125,5 +125,12 @@ static struct bench_item bench_pdu2tun = {
 };
 
 void n3n_initfuncs_benchmark_pdu () {
+#ifndef _WIN32
+    // Since we cannot create a socketpair and read the PDU, we cannot run
+    // checks on windows.
+    // TODO:
+    // - this is a limitation of how tuntap devs are handled / selected
+    // - even if we cannot check, it would be good to benchmark
     n3n_benchmark_register(&bench_pdu2tun);
+#endif
 }

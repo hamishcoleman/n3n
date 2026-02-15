@@ -50,7 +50,12 @@ static void *bench_setup (void) {
     return ctx;
 }
 
-static void bench_teardown (void *ctx) {
+static void bench_teardown (void *_ctx) {
+    struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
+
+    clear_peer_list(&ctx->eee.pending_peers);
+    peer_info_free(ctx->eee.curr_sn);
+    edge_term_conf(&ctx->eee.conf);
     free(ctx);
 }
 
@@ -76,15 +81,19 @@ static const ssize_t bench_pdu2tun_run (
 ) {
     struct bench_ctx *ctx = (struct bench_ctx *)_ctx;
 
-    struct sockaddr sa;
+    struct sockaddr_in sa;
     time_t now = time(NULL);
+
+    sa.sin_family = AF_INET;
+    sa.sin_port = 1;
+    sa.sin_addr.s_addr = 0x0fee1bad;
 
     // Avoid attempt to send a reply to this PDU
     ctx->eee.sock = -1;
 
     process_pdu(
         &ctx->eee,
-        &sa,
+        (struct sockaddr *)&sa,
         -1,
         (uint8_t *)data_in,
         data_in_size,

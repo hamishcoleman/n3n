@@ -564,11 +564,9 @@ int mainloop_runonce(struct n3n_runtime_data *eee) {
 
     int ready = select(maxfd + 1, &rd, &wr, NULL, &wait_time);
 
-    // One timestamp to use for this entire loop iteration
-    time_t now = time(NULL);
-
     if (ready == -1) {
         traceEvent(TRACE_ERROR, "select errno=%i", errno);
+        time_t now = time(NULL);
         fdlist_closeidle(now);
         return -1;
     }
@@ -578,6 +576,8 @@ int mainloop_runonce(struct n3n_runtime_data *eee) {
         return ready;
     }
 
+    // Only get time if we have I/O to process
+    time_t now = time(NULL);
     fdlist_check_ready(&rd, &wr, now, eee);
 
 #ifdef DEBUG_MALLOC

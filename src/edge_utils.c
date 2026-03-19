@@ -240,24 +240,15 @@ int edge_verify_conf (const n2n_edge_conf_t *conf) {
 
 /** Destination 01:00:5E:00:00:00 - 01:00:5E:7F:FF:FF is multicast ethernet.
  */
-static int is_ethMulticast (const void * buf, size_t bufsize) {
+static int is_ethMulticast(const void *buf, size_t bufsize) {
+    if (bufsize < 6) return 0;  // only need first 6 bytes (dhost)
 
-    int retval = 0;
+    const uint8_t *dhost = (const uint8_t *)buf;
 
-    /* Match 01:00:5E:00:00:00 - 01:00:5E:7F:FF:FF */
-    if(bufsize >= sizeof(ether_hdr_t)) {
-        /* copy to aligned memory */
-        ether_hdr_t eh;
-        memcpy(&eh, buf, sizeof(ether_hdr_t));
-
-        if((0x01 == eh.dhost[0]) &&
-           (0x00 == eh.dhost[1]) &&
-           (0x5E == eh.dhost[2]) &&
-           (0 == (0x80 & eh.dhost[3])))
-            retval = 1; /* This is an ethernet multicast packet [RFC1112]. */
-    }
-
-    return retval;
+    return (dhost[0] == 0x01) &&
+           (dhost[1] == 0x00) &&
+           (dhost[2] == 0x5E) &&
+           ((dhost[3] & 0x80) == 0);
 }
 
 /* ************************************** */

@@ -557,14 +557,10 @@ int mainloop_runonce(struct n3n_runtime_data *eee) {
     FD_ZERO(&wr);
     int maxfd = fdlist_fd_set(&rd, &wr);
 
-
-    struct timeval wait_time;
-    if(eee->sn_wait) {
-        wait_time.tv_sec = (SOCKET_TIMEOUT_INTERVAL_SECS / 10 + 1);
-    } else {
-        wait_time.tv_sec = (SOCKET_TIMEOUT_INTERVAL_SECS);
-    }
-    wait_time.tv_usec = 0;
+    struct timeval wait_time = {
+        .tv_sec = eee->sn_wait ? (SOCKET_TIMEOUT_INTERVAL_SECS / 10 + 1) : SOCKET_TIMEOUT_INTERVAL_SECS,
+        .tv_usec = 0
+    };
 
     int ready = select(maxfd + 1, &rd, &wr, NULL, &wait_time);
 

@@ -365,29 +365,21 @@ static int fdlist_fd_set (fd_set *rd, fd_set *wr) {
 static void handle_fd(const time_t now, const struct fd_info info, struct n3n_runtime_data *eee) {
     switch (info.proto) {
         case fd_info_proto_unknown:
-            // should not happen!
             assert(false);
             return;
 
         case fd_info_proto_tuntap:
-            // read an ethernet frame from the TAP socket; write on the IP
-            // socket
-            // TODO: change API to tell it which fd
             edge_read_from_tap(eee);
             return;
 
         case fd_info_proto_listen_http: {
             int client = accept(info.fd, NULL, 0);
             if (client == -1) {
-                // TODO:
-                // - increment error stats
                 return;
             }
 
             int slotnr = fdlist_allocslot(client, fd_info_proto_http);
             if (slotnr < 0) {
-                // TODO:
-                // - increment error stats
                 send(client, "HTTP/1.1 503 full\r\n", 19, 0);
                 closesocket(client);
                 return;
@@ -395,8 +387,6 @@ static void handle_fd(const time_t now, const struct fd_info info, struct n3n_ru
 
             int connnr = connlist_alloc(CONN_PROTO_HTTP);
             if (connnr < 0) {
-                // TODO:
-                // - increment error stats
                 send(client, "HTTP/1.1 503 full\r\n", 19, 0);
                 closesocket(client);
                 fdlist_freefd(client);
@@ -405,14 +395,13 @@ static void handle_fd(const time_t now, const struct fd_info info, struct n3n_ru
 
             fdlist[slotnr].connnr = connnr;
             conn_accept(&connlist[connnr], client, CONN_PROTO_HTTP);
-
             return;
         }
 
         case fd_info_proto_v3udp: {
             struct n3n_pktbuf *pkt = n3n_pktbuf_alloc(N2N_PKT_BUF_SIZE);
             if (!pkt) {
-                abort();
+                abort(); // allocation failure is fatal
             }
             pkt->owner = n3n_pktbuf_owner_rx_pdu;
             edge_read_proto3_udp(eee, info.fd, pkt, now);
@@ -427,22 +416,12 @@ static void handle_fd(const time_t now, const struct fd_info info, struct n3n_ru
             switch (conn->state) {
                 case CONN_EMPTY:
                 case CONN_READING:
-                    // These states dont require us to do anything
-                    // TODO:
-                    // - handle reading/sending simultaneous?
                     return;
 
                 case CONN_ERROR:
                 case CONN_CLOSED:
                     conn_close(conn, info.fd);
                     sb_zero(conn->request);
-                    // Let the upper layer realise its connection is gone by
-                    // showing it a zero sized request
-
-                    // TODO: if the upper layer doesnt react properly by
-                    // unregistering the dead filehandle, we leak slots and
-                    // conns here
-
                     edge_read_proto3_tcp(eee, -1, NULL, -1, now);
                     return;
 
@@ -497,15 +476,11 @@ static void handle_fd(const time_t now, const struct fd_info info, struct n3n_ru
             switch (conn->state) {
                 case CONN_EMPTY:
                 case CONN_READING:
-                    // These states dont require us to do anything
-                    // TODO:
-                    // - handle reading/sending simultaneous?
                     return;
 
                 case CONN_READY:
                     mgmt_api_handler(eee, conn);
                     if (conn->reply_sendpos == 0) {
-                        // Looks like we have finished a write, so we can clean up
                         sb_zero(conn->request);
                     }
                     return;
@@ -513,14 +488,12 @@ static void handle_fd(const time_t now, const struct fd_info info, struct n3n_ru
                 case CONN_ERROR:
                 case CONN_CLOSED:
                     conn_close(conn, info.fd);
-                    // TODO: freefd() is doing a fd search, we could optimise
                     fdlist_freefd(info.fd);
             }
             return;
         }
     }
 }
-
 /* TODO: decide if this quick helper is actually useful and needed
  * It was added to try and provide an action to do if select returns an error,
  * but it didnt end up closing connections - and the original error was traced
@@ -568,12 +541,9 @@ static void fdlist_check_ready(fd_set *rd, fd_set *wr, const time_t now, struct 
             }
 
             struct conn *conn = &connlist[fdlist[slot].connnr];
-
-            // TODO: track the stats on writes?
             conn_write(conn, fd);
 
             if (conn->reply_sendpos == 0) {
-                // Looks like we have finished a write, so we can clean up
                 sb_zero(conn->request);
             }
         }
@@ -606,11 +576,6 @@ int mainloop_runonce(struct n3n_runtime_data *eee) {
     FD_ZERO(&wr);
     int maxfd = fdlist_fd_set(&rd, &wr);
 
-    // FIXME:
-    // unlock the windows tun reader thread before select() and lock it
-    // again after select().  It currently works by accident, but the
-    // structures it manipulates are not thread-safe, so try to make it
-    // work by /design/
 
     struct timeval wait_time;
     if(eee->sn_wait) {

@@ -362,8 +362,8 @@ static int fdlist_fd_set (fd_set *rd, fd_set *wr) {
     return max_sock;
 }
 
-static void handle_fd (const time_t now, const struct fd_info info, struct n3n_runtime_data *eee) {
-    switch(info.proto) {
+static void handle_fd(const time_t now, const struct fd_info info, struct n3n_runtime_data *eee) {
+    switch (info.proto) {
         case fd_info_proto_unknown:
             // should not happen!
             assert(false);
@@ -378,14 +378,14 @@ static void handle_fd (const time_t now, const struct fd_info info, struct n3n_r
 
         case fd_info_proto_listen_http: {
             int client = accept(info.fd, NULL, 0);
-            if(client == -1) {
+            if (client == -1) {
                 // TODO:
                 // - increment error stats
                 return;
             }
 
             int slotnr = fdlist_allocslot(client, fd_info_proto_http);
-            if(slotnr < 0) {
+            if (slotnr < 0) {
                 // TODO:
                 // - increment error stats
                 send(client, "HTTP/1.1 503 full\r\n", 19, 0);
@@ -394,7 +394,7 @@ static void handle_fd (const time_t now, const struct fd_info info, struct n3n_r
             }
 
             int connnr = connlist_alloc(CONN_PROTO_HTTP);
-            if(connnr < 0) {
+            if (connnr < 0) {
                 // TODO:
                 // - increment error stats
                 send(client, "HTTP/1.1 503 full\r\n", 19, 0);
@@ -411,7 +411,7 @@ static void handle_fd (const time_t now, const struct fd_info info, struct n3n_r
 
         case fd_info_proto_v3udp: {
             struct n3n_pktbuf *pkt = n3n_pktbuf_alloc(N2N_PKT_BUF_SIZE);
-            if(!pkt) {
+            if (!pkt) {
                 abort();
             }
             pkt->owner = n3n_pktbuf_owner_rx_pdu;
@@ -424,7 +424,7 @@ static void handle_fd (const time_t now, const struct fd_info info, struct n3n_r
             struct conn *conn = &connlist[info.connnr];
             conn_read(conn, info.fd);
 
-            switch(conn->state) {
+            switch (conn->state) {
                 case CONN_EMPTY:
                 case CONN_READING:
                     // These states dont require us to do anything
@@ -494,7 +494,7 @@ static void handle_fd (const time_t now, const struct fd_info info, struct n3n_r
             struct conn *conn = &connlist[info.connnr];
             conn_read(conn, info.fd);
 
-            switch(conn->state) {
+            switch (conn->state) {
                 case CONN_EMPTY:
                 case CONN_READING:
                     // These states dont require us to do anything
@@ -504,7 +504,7 @@ static void handle_fd (const time_t now, const struct fd_info info, struct n3n_r
 
                 case CONN_READY:
                     mgmt_api_handler(eee, conn);
-                    if(conn->reply_sendpos == 0) {
+                    if (conn->reply_sendpos == 0) {
                         // Looks like we have finished a write, so we can clean up
                         sb_zero(conn->request);
                     }
@@ -544,7 +544,7 @@ static void fdlist_closeidle (const time_t now) {
     }
 }
 
-static void fdlist_check_ready (fd_set *rd, fd_set *wr, const time_t now, struct n3n_runtime_data *eee) {
+static void fdlist_check_ready(fd_set *rd, fd_set *wr, const time_t now, struct n3n_runtime_data *eee) {
     int slot = 0;
     // A linear scan is not ideal, but until we support things other than
     // select() it will need to suffice
@@ -558,7 +558,7 @@ static void fdlist_check_ready (fd_set *rd, fd_set *wr, const time_t now, struct
             fdlist[slot].stats_reads++;
             handle_fd(now, fdlist[slot], eee);
         }
-        if(FD_ISSET(fd, wr)) {
+        if (FD_ISSET(fd, wr)) {
             // We should not be listening on this socket if there is no
             // connnr assigned, but paranoia..
             if(fdlist[slot].connnr == -1) {
@@ -572,7 +572,7 @@ static void fdlist_check_ready (fd_set *rd, fd_set *wr, const time_t now, struct
             // TODO: track the stats on writes?
             conn_write(conn, fd);
 
-            if(conn->reply_sendpos == 0) {
+            if (conn->reply_sendpos == 0) {
                 // Looks like we have finished a write, so we can clean up
                 sb_zero(conn->request);
             }
@@ -596,7 +596,7 @@ static time_t last_mallinfo;
 #endif
 #endif
 
-int mainloop_runonce (struct n3n_runtime_data *eee) {
+int mainloop_runonce(struct n3n_runtime_data *eee) {
     fd_set rd;
     fd_set wr;
 
@@ -625,13 +625,13 @@ int mainloop_runonce (struct n3n_runtime_data *eee) {
     // One timestamp to use for this entire loop iteration
     time_t now = time(NULL);
 
-    if(ready == -1) {
+    if (ready == -1) {
         traceEvent(TRACE_ERROR, "select errno=%i", errno);
         fdlist_closeidle(now);
         return -1;
     }
 
-    if(ready < 1) {
+    if (ready == 0) {
         // Nothing ready
         return ready;
     }
@@ -655,7 +655,7 @@ int mainloop_runonce (struct n3n_runtime_data *eee) {
 
             fprintf(stderr,"===malloc_info start===\n");
             malloc_info(0, stderr);
-            fprintf(stderr,"===malloc_info end===\n");
+            fprintf(stderr, "===malloc_info end===\n");
         }
     }
 #endif

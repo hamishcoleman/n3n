@@ -501,45 +501,45 @@ static void fdlist_closeidle (const time_t now) {
 }
 
 static void fdlist_check_ready(fd_set *rd, fd_set *wr, const time_t now, struct n3n_runtime_data *eee) {
-    int slot = 0;
-    // A linear scan is not ideal, but until we support things other than
-    // select() it will need to suffice
-    while(slot < MAX_HANDLES) {
-        int fd = fdlist[slot].fd;
-        if(fd == -1) {
-            slot++;
-            continue;
-        }
-        if(FD_ISSET(fd, rd)) {
+    for (int slot = 0; slot < MAX_HANDLES; slot++) {
+        const int fd = fdlist[slot].fd;
+        if (fd == -1) continue;
+
+        const int connnr = fdlist[slot].connnr;
+        struct conn *conn = (connnr != -1) ? &connlist[connnr] : NULL;
+
+        /* Check for readable data */
+        if (FD_ISSET(fd, rd)) {
             fdlist[slot].stats_reads++;
             handle_fd(now, fdlist[slot], eee);
         }
+
+        /* Check for writable data */
         if (FD_ISSET(fd, wr)) {
-            // We should not be listening on this socket if there is no
-            // connnr assigned, but paranoia..
-            if(fdlist[slot].connnr == -1) {
+            if (connnr == -1) {
+#if TRACE_ENABLED && (TRACE_LEVEL >= TRACE_DEBUG)
                 traceEvent(TRACE_DEBUG, "writer bad connnr");
-                slot++;
+#endif
                 continue;
             }
 
-            struct conn *conn = &connlist[fdlist[slot].connnr];
             conn_write(conn, fd);
 
+            /* Clear request buffer if write is complete */
             if (conn->reply_sendpos == 0) {
                 sb_zero(conn->request);
             }
         }
 
-        if(fdlist[slot].connnr != -1) {
-            int timeout = 60;
-            struct conn *conn = &connlist[fdlist[slot].connnr];
-            bool closed = conn_closeidle(conn, fd, now, timeout);
-            if(closed) {
+        /* Close idle connections (only if connection exists) */
+        if (conn) {
+            // Only check idle timeout if we did I/O or periodically
+            // But for simplicity and correctness, we keep per-loop check
+            // (60s timeout → check is cheap)
+            if (conn_closeidle(conn, fd, now, 60)) {
                 fdlist_freefd(fd);
             }
         }
-        slot++;
     }
 }
 

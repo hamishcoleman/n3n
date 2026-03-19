@@ -471,6 +471,7 @@ static void handle_fd(const time_t now, const struct fd_info info, struct n3n_ru
                 case CONN_CLOSED:
                     conn_close(conn, info.fd);
                     fdlist_freefd(info.fd);
+                    return;
             }
             return;
         }

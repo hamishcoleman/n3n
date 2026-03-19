@@ -614,7 +614,6 @@ static ssize_t sendto_peer (struct n3n_runtime_data *sss,
                             const uint8_t *pktbuf,
                             size_t pktsize) {
 
-    n2n_sock_str_t sockbuf;
 
     if(AF_INET == peer->sock.family) {
 
@@ -622,10 +621,12 @@ static ssize_t sendto_peer (struct n3n_runtime_data *sss,
         struct sockaddr_in socket;
         fill_sockaddr((struct sockaddr *)&socket, sizeof(socket), &(peer->sock));
 
+#if TRACE_ENABLED && (TRACE_LEVEL >= TRACE_DEBUG)
+        n2n_sock_str_t sockbuf;
         traceEvent(TRACE_DEBUG, "sent %lu bytes to [%s]",
                    pktsize,
                    sock_to_cstr(sockbuf, &(peer->sock)));
-
+#endif
         return sendto_sock(sss,
                            (peer->socket_fd >= 0) ? peer->socket_fd : sss->sock,
                            (const struct sockaddr*)&socket, pktbuf, pktsize);

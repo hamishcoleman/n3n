@@ -147,11 +147,17 @@ char * macaddr_str (macstr_t buf,
 
 
 /* http://www.faqs.org/rfcs/rfc908.html */
-uint8_t is_multi_broadcast (const n2n_mac_t dest_mac) {
 
-    int is_broadcast = (memcmp(broadcast_mac, dest_mac, N2N_MAC_SIZE) == 0);
-    int is_multicast = (memcmp(multicast_mac, dest_mac, 3) == 0) && !(dest_mac[3] >> 7);
-    int is_ipv6_multicast = (memcmp(ipv6_multicast_mac, dest_mac, 2) == 0);
+uint8_t is_multi_broadcast(const n2n_mac_t dest_mac) {
+    // Broadcast: FF:FF:FF:FF:FF:FF
+    int is_broadcast = (dest_mac[0] == 0xFF && dest_mac[1] == 0xFF &&
+                        dest_mac[2] == 0xFF && dest_mac[3] == 0xFF &&
+                        dest_mac[4] == 0xFF && dest_mac[5] == 0xFF);
+    // Multicast: 01:00:5E:...
+    int is_multicast = (dest_mac[0] == 0x01 && dest_mac[1] == 0x00 &&
+                        dest_mac[2] == 0x5E && !(dest_mac[3] >> 7));
+    // IPv6 Multicast: 33:33:...
+    int is_ipv6_multicast = (dest_mac[0] == 0x33 && dest_mac[1] == 0x33);
 
     return is_broadcast || is_multicast || is_ipv6_multicast;
 }

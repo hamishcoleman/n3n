@@ -572,8 +572,8 @@ int mainloop_runonce(struct n3n_runtime_data *eee) {
     }
 
     if (ready == 0) {
-        // Nothing ready
-        return ready;
+        // Timeout — nothing ready
+        return 0;
     }
 
     // Only get time if we have I/O to process

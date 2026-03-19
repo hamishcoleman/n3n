@@ -550,11 +550,9 @@ static time_t last_mallinfo;
 #endif
 
 int mainloop_runonce(struct n3n_runtime_data *eee) {
-    fd_set rd;
-    fd_set wr;
-
     metrics.mainloop++;
 
+    fd_set rd, wr;
     FD_ZERO(&rd);
     FD_ZERO(&wr);
     int maxfd = fdlist_fd_set(&rd, &wr);

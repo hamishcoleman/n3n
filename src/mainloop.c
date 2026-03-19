@@ -426,43 +426,25 @@ static void handle_fd(const time_t now, const struct fd_info info, struct n3n_ru
                     return;
 
                 case CONN_READY: {
-                    int size = ntohs(*(uint16_t *)&conn->request->str);
+                    uint16_t tmp;
+                    memcpy(&tmp, &conn->request->str[0], sizeof(tmp));
+                    size_t size = ntohs(tmp);
+                    edge_read_proto3_tcp(eee, info.fd, (uint8_t *)&conn->request->str[2], size, now);
 
-                    edge_read_proto3_tcp(
-                        eee,
-                        info.fd,
-                        (uint8_t *)&conn->request->str[2],
-                        size,
-                        now
-                    );
-
-                    if(sb_len(conn->request) == (size + 2)) {
-                        // We read exactly one packet
-                        // TODO: this crosses layers by reaching inside the
-                        // conn object
+                    size_t total = (size_t)size + 2;
+                    if (sb_len(conn->request) == total) {
                         sb_zero(conn->request);
                         conn->state = CONN_EMPTY;
-                        return;
+                    } else {
+                        size_t more = sb_len(conn->request) - total;
+#if TRACE_ENABLED && (TRACE_LEVEL >= TRACE_DEBUG)
+                        traceEvent(TRACE_DEBUG, "packet has %zu more bytes", more);
+#endif
+                        memmove(conn->request->str, &conn->request->str[total], more);
+                        conn->request->rd_pos = 0;
+                        conn->request->wr_pos = more;
+                        conn->state = CONN_READING;
                     }
-
-                    // Our buffer contains data beyond the single packet
-
-                    // TODO: this crosses layers by reaching inside the
-                    // conn object
-                    int more = sb_len(conn->request) - (size + 2);
-                    traceEvent(TRACE_DEBUG, "packet has %i more bytes", more);
-                    memmove(
-                        conn->request->str,
-                        &conn->request->str[size + 2],
-                        more
-                    );
-                    conn->request->rd_pos = 0;
-                    conn->request->wr_pos = more;
-                    conn->state = CONN_READING;
-
-                    // FIXME: sometimes we will have an entire next packet in
-                    // the buffer, which means we should not wait for the FD
-                    // to be read ready again
                     return;
                 }
             }

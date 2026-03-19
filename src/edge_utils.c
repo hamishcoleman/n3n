@@ -256,23 +256,11 @@ static int is_ethMulticast(const void *buf, size_t bufsize) {
 /** Destination MAC 33:33:0:00:00:00 - 33:33:FF:FF:FF:FF is reserved for IPv6
  *    neighbour discovery.
  */
-static int is_ip6_discovery (const void * buf, size_t bufsize) {
-
-    int retval = 0;
-
-    if(bufsize >= sizeof(ether_hdr_t)) {
-        /* copy to aligned memory */
-        ether_hdr_t eh;
-
-        memcpy(&eh, buf, sizeof(ether_hdr_t));
-
-        if((0x33 == eh.dhost[0]) && (0x33 == eh.dhost[1]))
-            retval = 1; /* This is an IPv6 multicast packet [RFC2464]. */
-    }
-
-    return retval;
+static int is_ip6_discovery(const void *buf, size_t bufsize) {
+    if (bufsize < 2) return 0;
+    const uint8_t *dhost = (const uint8_t *)buf;
+    return (dhost[0] == 0x33) && (dhost[1] == 0x33);
 }
-
 
 /* ************************************** */
 

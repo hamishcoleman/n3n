@@ -565,7 +565,9 @@ int mainloop_runonce(struct n3n_runtime_data *eee) {
     int ready = select(maxfd + 1, &rd, &wr, NULL, &wait_time);
 
     if (ready == -1) {
+#if TRACE_ENABLED && (TRACE_LEVEL >= TRACE_ERROR)
         traceEvent(TRACE_ERROR, "select errno=%i", errno);
+#endif
         time_t now = time(NULL);
         fdlist_closeidle(now);
         return -1;
@@ -580,27 +582,24 @@ int mainloop_runonce(struct n3n_runtime_data *eee) {
     time_t now = time(NULL);
     fdlist_check_ready(&rd, &wr, now, eee);
 
-#ifdef DEBUG_MALLOC
-#ifdef __GLIBC__
-    if(getTraceLevel() >= TRACE_DEBUG) {
-        if((now & ~0x3f) > last_mallinfo) {
+#if defined(DEBUG_MALLOC) && defined(__GLIBC__)
+    // Only enable if both debug malloc AND tracing are on
+    #if TRACE_ENABLED && (TRACE_LEVEL >= TRACE_DEBUG)
+    {
+        static time_t last_mallinfo = 0;
+        if ((now & ~0x3f) > last_mallinfo) {
             last_mallinfo = now;
             struct mallinfo2 mi = mallinfo2();
-            traceEvent(
-                TRACE_DEBUG,
-                "mallinfo: area=%i uordblks=%i, fordblks=%i, keepcost=%i",
-                mi.arena,
-                mi.uordblks,
-                mi.fordblks,
-                mi.keepcost
-            );
+            traceEvent(TRACE_DEBUG,
+                "mallinfo: arena=%i uordblks=%i, fordblks=%i, keepcost=%i",
+                mi.arena, mi.uordblks, mi.fordblks, mi.keepcost);
 
-            fprintf(stderr,"===malloc_info start===\n");
+            fprintf(stderr, "===malloc_info start===\n");
             malloc_info(0, stderr);
             fprintf(stderr, "===malloc_info end===\n");
         }
     }
-#endif
+    #endif
 #endif
 
     return ready;

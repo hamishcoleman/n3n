@@ -1869,9 +1869,6 @@ static int handle_PACKET(struct n3n_runtime_data *eee,
                            intoa(ntohl(*dst), ip_buf, sizeof(ip_buf)));
                 return(-1);
             }
-
-            /* This packet is directed to us */
-            /* traceEvent(TRACE_INFO, "Sending non-routed packet"); */
         }
     }
 
@@ -2119,11 +2116,8 @@ void edge_send_packet2net(struct n3n_runtime_data *eee,
 
     /* Optionally compress then apply transforms, eg encryption. */
 
-    /* Once processed, send to destination in PACKET */
-
     memcpy(destMac, tap_pkt, N2N_MAC_SIZE); /* dest MAC is first in ethernet header */
 #ifdef HAVE_BRIDGING_SUPPORT
-    /* find the destMac behind which edge, and change dest to this edge */
     if((eee->conf.allow_routing) && (!is_multi_broadcast(destMac))) {
         struct host_info *host = NULL;
         HASH_FIND(hh, eee->known_hosts, destMac, sizeof(n2n_mac_t), host);
@@ -2147,7 +2141,6 @@ void edge_send_packet2net(struct n3n_runtime_data *eee,
 
     pkt.transform = tx_transop_idx;
 
-    // compression needs to be tried before encode_PACKET is called for compression indication gets encoded there
     pkt.compression = N2N_COMPRESSION_ID_NONE;
 
     if (eee->conf.compression) {
@@ -2213,34 +2206,26 @@ void edge_send_packet2net(struct n3n_runtime_data *eee,
     {
         const u_int eth_udp_overhead = ETH_FRAMESIZE + IP4_MIN_SIZE + UDP_SIZE;
 
-        // MTU assertion which avoids fragmentation by N2N
         assert(idx + eth_udp_overhead <= MTU_ASSERT_VALUE);
     }
 #endif
 
-    eee->transop.tx_cnt++; /* stats */
+    eee->transop.tx_cnt++; // stats
 
     send_packet(eee, destMac, pktbuf, idx); /* to peer or supernode */
 }
-
 /* ************************************** */
 
 /** Read a single packet from the TAP interface, process it and write out the
  *    corresponding packet to the cooked socket.
  */
 void edge_read_from_tap(struct n3n_runtime_data *eee) {
-
-    /* tun -> remote */
     uint8_t eth_pkt[N2N_PKT_BUF_SIZE];
     macstr_t mac_buf;
     ssize_t len;
 
     len = tuntap_read( &(eee->device), eth_pkt, N2N_PKT_BUF_SIZE );
     if (len <= 0 || (size_t)len > N2N_PKT_BUF_SIZE) {
-        // TODO:
-        // - how often does this actually happen
-        // - why does it happen
-        // - can we just remove this special case?
         traceEvent(
             TRACE_WARNING,
             "read()=%d [%d/%s]",
@@ -2250,8 +2235,8 @@ void edge_read_from_tap(struct n3n_runtime_data *eee) {
         );
         traceEvent(TRACE_WARNING, "TAP I/O operation aborted, restart later.");
         eee->stats.tx_tuntap_error++;
-
         sleep(3);
+
 #ifndef _WIN32
         mainloop_unregister_fd(eee->device.fd);
 #endif
@@ -2300,9 +2285,7 @@ void edge_read_from_tap(struct n3n_runtime_data *eee) {
     edge_send_packet2net(eee, eth_pkt, len);
 }
 
-
 /* ************************************** */
-
 
 /** handle a datagram from the main UDP socket to the internet. */
 void process_pdu(struct n3n_runtime_data *eee,
@@ -2330,20 +2313,11 @@ void process_pdu(struct n3n_runtime_data *eee,
     uint64_t stamp = 0;
     int skip_add = 0;
 
-    /* REVISIT: when UDP/IPv6 is supported we will need a flag to indicate which
-     * IP transport version the packet arrived on. May need to UDP sockets. */
-
-    // TODO: pass the sender to process_pdu, dont calculate it here
     if (eee->conf.connect_tcp)
-        // TCP expects that we know our comm partner and does not deliver the sender
         memcpy(&sender, &(eee->curr_sn->sock), sizeof(sender));
     else {
-        // REVISIT: type conversion back and forth, choose a consistent approach throughout whole code,
-        //          i.e. stick with more general sockaddr as long as possible and narrow only if required
         fill_n2nsock(&sender, sender_sock);
     }
-    /* The packet may not have an orig_sender socket spec. So default to last
-     * hop as sender. */
     orig_sender = &sender;
 
 #ifdef SKIP_MULTICAST_PEERS_DISCOVERY
@@ -2356,8 +2330,6 @@ void process_pdu(struct n3n_runtime_data *eee,
                (signed int)udp_size, sock_to_cstr(sockbuf1, &sender));
 
     if (eee->conf.header_encryption == HEADER_ENCRYPTION_ENABLED) {
-        // match with static (1) or dynamic (2) ctx?
-        // check dynamic first as it is identical to static in normal header encryption mode
         if (packet_header_decrypt(udp_buf, udp_size,
                                   (char *)eee->conf.community_name,
                                   eee->conf.header_encryption_ctx_dynamic,
@@ -2381,27 +2353,21 @@ void process_pdu(struct n3n_runtime_data *eee,
             traceEvent(TRACE_DEBUG, "failed to decrypt header");
             return;
         }
-        // time stamp verification follows in the packet specific section as it requires to determine the
-        // sender from the hash list by its MAC, or the packet might be from the supernode, this all depends
-        // on packet type, path taken (via supernode) and packet structure (MAC is not always in the same place)
     }
 
     rem = udp_size; /* Counts down bytes of packet to protect against buffer overruns. */
     idx = 0; /* marches through packet header as parts are decoded. */
     if (decode_common(&cmn, udp_buf, &rem, &idx) < 0) {
         if (via_multicast) {
-            // from some other edge on local network, possibly header encrypted
             traceEvent(TRACE_DEBUG, "dropped packet arriving via multicast due to error while decoding N2N_UDP");
         } else {
             traceEvent(TRACE_INFO, "failed to decode common section in N2N_UDP");
         }
-        return; /* failed to decode packet */
+        return;
     }
 
     msg_type = cmn.pc; /* packet code */
 
-    // special case for user/pw auth
-    // community's auth scheme and message type need to match the used key (dynamic)
     if((eee->conf.shared_secret)
        && (msg_type != MSG_TYPE_REGISTER_SUPER_ACK)
        && (msg_type != MSG_TYPE_REGISTER_SUPER_NAK)) {
@@ -2444,9 +2410,7 @@ void process_pdu(struct n3n_runtime_data *eee,
 
     switch (msg_type) {
         case MSG_TYPE_PACKET: {
-            /* process PACKET - most frequent so first in list. */
             n2n_PACKET_t pkt;
-
             decode_PACKET(&pkt, &cmn, udp_buf, &rem, &idx);
 
             if (eee->conf.header_encryption == HEADER_ENCRYPTION_ENABLED) {
@@ -2459,23 +2423,15 @@ void process_pdu(struct n3n_runtime_data *eee,
             }
 
             if (!eee->last_sup) {
-                // drop packets received before first registration with supernode
                 traceEvent(TRACE_DEBUG, "dropped PACKET recevied before first registration with supernode");
                 return;
             }
 
             if (!from_supernode) {
-                /* This is a P2P packet from the peer. We purge a pending
-                 * registration towards the possibly nat-ted peer address as we now have
-                 * a valid channel. We still use check_peer_registration_needed in
-                 * handle_PACKET to double check this.
-                 */
                 traceEvent(TRACE_DEBUG, "[p2p] from %s",
                            macaddr_str(mac_buf1, pkt.srcMac));
                 find_and_remove_peer(&eee->pending_peers, pkt.srcMac);
             } else {
-                /* [PsP] : edge Peer->Supernode->edge Peer */
-
                 if (is_valid_peer_sock(&pkt.sock))
                     orig_sender = &(pkt.sock);
 
@@ -2484,10 +2440,8 @@ void process_pdu(struct n3n_runtime_data *eee,
                            sock_to_cstr(sockbuf1, &sender));
             }
 
-            /* Update the sender in peer table entry */
             check_peer_registration_needed(eee, from_supernode, via_multicast,
                                            pkt.srcMac,
-                                           // REVISIT: also consider PORT_REG_COOKIEs when implemented
                                            from_supernode ? N2N_FORWARDED_REG_COOKIE : N2N_REGULAR_REG_COOKIE,
                                            NULL, NULL, orig_sender);
 
@@ -2496,9 +2450,7 @@ void process_pdu(struct n3n_runtime_data *eee,
         }
 
         case MSG_TYPE_REGISTER: {
-            /* Another edge is registering with us */
             n2n_REGISTER_t reg;
-
             decode_REGISTER(&reg, &cmn, udp_buf, &rem, &idx);
 
             via_multicast &= is_null_mac(reg.dstMac);
@@ -2527,18 +2479,11 @@ void process_pdu(struct n3n_runtime_data *eee,
             }
 
             if (!from_supernode) {
-                /* This is a P2P registration from the peer. We purge a pending
-                 * registration towards the possibly nat-ted peer address as we now have
-                 * a valid channel. We still use check_peer_registration_needed below
-                 * to double check this.
-                 */
                 traceEvent(TRACE_INFO, "[p2p] Rx REGISTER from %s [%s]%s",
                            macaddr_str(mac_buf1, reg.srcMac),
                            sock_to_cstr(sockbuf1, &sender),
                            (reg.cookie & N2N_LOCAL_REG_COOKIE) ? " (local)" : "");
                 find_and_remove_peer(&eee->pending_peers, reg.srcMac);
-
-                /* NOTE: only ACK to peers */
                 send_register_ack(eee, orig_sender, &reg);
             } else {
                 traceEvent(TRACE_INFO, "[pSp] Rx REGISTER from %s [%s] to %s via [%s]",
@@ -2552,9 +2497,7 @@ void process_pdu(struct n3n_runtime_data *eee,
         }
 
         case MSG_TYPE_REGISTER_ACK: {
-            /* Peer edge is acknowledging our register request */
             n2n_REGISTER_ACK_t ra;
-
             decode_REGISTER_ACK(&ra, &cmn, udp_buf, &rem, &idx);
 
             if (eee->conf.header_encryption == HEADER_ENCRYPTION_ENABLED) {
@@ -2606,7 +2549,7 @@ void process_pdu(struct n3n_runtime_data *eee,
                 }
             }
 
-            // hash check (user/pw auth only)
+            /* Hash check (user/pw auth only) */
             if (eee->conf.shared_secret) {
                 speck_128_encrypt(hash_buf, (speck_context_t*)eee->conf.shared_secret_ctx);
                 if (memcmp(hash_buf, udp_buf + udp_size - N2N_REG_SUP_HASH_CHECK_LEN, N2N_REG_SUP_HASH_CHECK_LEN)) {
@@ -2670,7 +2613,6 @@ void process_pdu(struct n3n_runtime_data *eee,
                         sock_to_cstr(sockbuf, &(sn->sock))
                     );
                 }
-                // shift to next payload entry
                 payload++;
             }
 
@@ -2682,28 +2624,19 @@ void process_pdu(struct n3n_runtime_data *eee,
             }
 
             eee->sn_wait = 0;
-            reset_sup_attempts(eee); /* refresh because we got a response */
+            reset_sup_attempts(eee);
 
-            // update last_sup only on 'real' REGISTER_SUPER_ACKs, not on bootstrap ones (own MAC address
-            // still null_mac) this allows reliable in/out PACKET drop if not really registered with a supernode yet
             if (!is_null_mac(eee->device.mac_addr)) {
                 if (!eee->last_sup) {
-                    // indicates first successful connection between the edge and a supernode
                     traceEvent(TRACE_NORMAL, "[OK] edge <<< ================ >>> supernode");
-                    // send gratuitous ARP only upon first registration with supernode
                     send_grat_arps(eee);
                 }
                 eee->last_sup = now;
             }
-
-            // NOTE: the register_interval should be chosen by the edge node based on its NAT configuration.
-            // eee->conf.register_interval = ra.lifetime;
-
             break;
         }
 
         case MSG_TYPE_REGISTER_SUPER_NAK: {
-
             n2n_REGISTER_SUPER_NAK_t nak;
 
             if (!(eee->sn_wait)) {
@@ -2729,10 +2662,6 @@ void process_pdu(struct n3n_runtime_data *eee,
                 return;
             }
 
-            // REVISIT: authenticate the NAK packet really originating from the supernode along the auth token.
-            //          this must follow a different scheme because it needs to prove authenticity although the
-            //          edge-provided credentials are wrong
-
             traceEvent(TRACE_INFO, "Rx REGISTER_SUPER_NAK");
 
             if (memcmp(nak.srcMac, eee->device.mac_addr, sizeof(n2n_mac_t)) == 0) {
@@ -2747,24 +2676,11 @@ void process_pdu(struct n3n_runtime_data *eee,
                 } else {
                     traceEvent(TRACE_ERROR, "authentication error, MAC or IP address already in use or not released yet by supernode");
                 }
-                // REVISIT: the following portion is too harsh, repeated error warning should be sufficient until it eventually is resolved,
-                //           preventing de-auth attacks
-                /* exit(1); this is too harsh, repeated error warning should be sufficient until it eventually is resolved, preventing de-auth attacks
-                   } else {
-                   HASH_FIND_PEER(eee->known_peers, nak.srcMac, peer);
-                   if(peer != NULL) {
-                    HASH_DEL(eee->known_peers, peer);
-                   }
-                   HASH_FIND_PEER(eee->pending_peers, nak.srcMac, scan);
-                   if(scan != NULL) {
-                    HASH_DEL(eee->pending_peers, scan);
-                   } */
             }
             break;
         }
 
         case MSG_TYPE_PEER_INFO: {
-
             n2n_PEER_INFO_t pi;
             struct peer_info * scan;
             int skip_add;
@@ -2788,7 +2704,7 @@ void process_pdu(struct n3n_runtime_data *eee,
             }
 
             if (is_null_mac(pi.mac)) {
-                // PONG - answer to PING (QUERY_PEER_INFO with null mac)
+                /* PONG */
                 skip_add = SN_ADD_SKIP;
                 scan = add_sn_to_list_by_mac_or_sock(&(eee->supernodes), &sender, pi.srcMac, &skip_add);
                 if(scan != NULL) {
@@ -2796,10 +2712,8 @@ void process_pdu(struct n3n_runtime_data *eee,
                     scan->last_seen = now;
                     scan->uptime = pi.uptime;
                     memcpy(scan->version, pi.version, sizeof(n2n_version_t));
-                    /* The data type depends on the actual selection strategy that has been chosen. */
                     uint64_t sn_sel_tmp = pi.load;
                     sn_selection_criterion_calculate(eee, scan, sn_sel_tmp);
-
                     traceEvent(TRACE_INFO, "Rx PONG from supernode %s version '%s'",
                                macaddr_str(mac_buf1, pi.srcMac),
                                pi.version);
@@ -2810,7 +2724,6 @@ void process_pdu(struct n3n_runtime_data *eee,
                 // regular PEER_INFO
                 HASH_FIND_PEER(eee->pending_peers, pi.mac, scan);
                 if (!scan)
-                    // just in case the remote edge has been upgraded by the REG/ACK mechanism in the meantime
                     HASH_FIND_PEER(eee->known_peers, pi.mac, scan);
 
                 if (scan) {
@@ -2823,14 +2736,11 @@ void process_pdu(struct n3n_runtime_data *eee,
                     if (cmn.flags & N2N_FLAGS_SOCKET) {
                         scan->preferred_sock = pi.preferred_sock;
                         send_register(eee, &scan->preferred_sock, scan->mac_addr, N2N_LOCAL_REG_COOKIE);
-
                         traceEvent(TRACE_INFO, "%s has preferred local socket at [%s]",
                                    macaddr_str(mac_buf1, pi.mac),
                                    sock_to_cstr(sockbuf1, &pi.preferred_sock));
                     }
-
                     send_register(eee, &scan->sock, scan->mac_addr, N2N_REGULAR_REG_COOKIE);
-
                 } else {
                     traceEvent(TRACE_INFO, "Rx PEER_INFO unknown peer %s",
                                macaddr_str(mac_buf1, pi.mac));
@@ -2849,9 +2759,6 @@ void process_pdu(struct n3n_runtime_data *eee,
                 }
             }
 
-            // only accept in user/pw mode for immediate re-registration because the new
-            // key is required for continous traffic flow, in other modes edge will realize
-            // changes with regular recurring REGISTER_SUPER
             if (!eee->conf.shared_secret) {
                 traceEvent(TRACE_DEBUG, "dropped RE_REGISTER_SUPER as not in user/pw auth mode");
                 return;
@@ -2860,17 +2767,14 @@ void process_pdu(struct n3n_runtime_data *eee,
             traceEvent(TRACE_INFO, "Rx RE_REGISTER_SUPER");
 
             eee->sn_wait = 2; /* immediately */
-
             break;
         }
 
         default:
-            /* Not a known message type */
             traceEvent(TRACE_INFO, "unable to handle packet type %d: ignored", (signed int)msg_type);
             return;
-    } /* switch(msg_type) */
+    }
 }
-
 
 /* ************************************** */
 
@@ -3013,9 +2917,7 @@ static void print_edge_stats (const struct n3n_runtime_data *eee) {
 
 /* ************************************** */
 
-
 int run_edge_loop(struct n3n_runtime_data *eee) {
-
     size_t numPurged;
     time_t lastIfaceCheck = 0;
     time_t last_purge_known = 0;
@@ -3038,19 +2940,8 @@ int run_edge_loop(struct n3n_runtime_data *eee) {
     n3n_metrics_register(&edge_metrics_module1);
     n3n_metrics_register(&edge_metrics_module2);
 
-    /* Main loop
-     *
-     * select() is used to wait for input on either the TAP fd or the UDP/TCP
-     * socket. When input is present the data is read and processed by either
-     * readFromIPSocket() or edge_read_from_tap()
-     */
-
     while (*eee->keep_running) {
         mainloop_runonce(eee);
-
-        // TODO:
-        // - migrate all the following regular actions into the
-        // mainloop_runonce() function
 
         time_t now = time(NULL);
 
@@ -3058,11 +2949,9 @@ int run_edge_loop(struct n3n_runtime_data *eee) {
         if(!(*eee->keep_running))
             break;
 
-        // finished processing select data
         update_supernode_reg(eee, now);
 
         numPurged = 0;
-        // keep, i.e. do not purge, the known peers while no supernode supernode connection
         if (!eee->sn_wait) {
             numPurged = purge_expired_nodes(&eee->known_peers,
                                             eee->sock, NULL,
@@ -3096,11 +2985,7 @@ int run_edge_loop(struct n3n_runtime_data *eee) {
         }
 #endif
 
-        // TODO:
-        // - a static ip address mode
-        // - a notifier so we dont need to poll for changes
-        // - ipv6 support
-        // - multi-homing support
+        // DHCP IP refresh
         if (eee->conf.tuntap_ip_mode == TUNTAP_IP_MODE_DHCP &&
             (now >= lastIfaceCheck + IFACE_UPDATE_INTERVAL)) {
             traceEvent(TRACE_INFO, "re-checking dynamic IP address");
@@ -3117,38 +3002,26 @@ int run_edge_loop(struct n3n_runtime_data *eee) {
         );
 
         if (eee->resolution_request) {
-            // This currently gets signaled in update_supernode_reg when a
-            // supernode is not responding
-            //
-            // TODO: update this once we have the new async resolving
             if (resolve_hostnames_str_to_peer_info(RESOLVE_LIST_SUPERNODE, &eee->supernodes)) {
                 traceEvent(
                     TRACE_WARNING,
                     "resolve_hostnames_str_to_peer_info returned errors"
                 );
             } else {
-                // No errors, so clear the request
                 eee->resolution_request = false;
             }
         }
 
-
-    } /* while */
+    } // while
 
     send_unregister_super(eee);
 
 #ifdef _WIN32
-    // No, I dont want to wait for the thread to receive a tap packet
-    // and unblock to read it.  So I kill it.  The MSDN warns against
-    // using this function, but we are on the way to exit the program,
-    // so I believe that the risk is low
     TerminateThread(tun_read_thread, 1);
-
     WaitForSingleObject(tun_read_thread, INFINITE);
 #endif
 
     supernode_disconnect(eee);
-
     return 0;
 }
 
